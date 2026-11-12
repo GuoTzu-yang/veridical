@@ -1,6 +1,18 @@
 ﻿# push.ps1 -- 把 model1-arch 推到 GitHub 私库
 #
-# 本机实测：github.com:443 不可达（DNS 污染，解析到 104.244.46.165，Twitter 的 IP 段），
+# 本机实测（2026-11-12）：
+#   * github.com:443 的 DNS 被污染，解析到 104.244.46.165（Twitter 的 IP 段）
+#   * 但真实 IP 的 TCP 是通的 —— 140.82.112.3 / 140.82.113.3 / 20.205.243.166
+#     三个都完成了三次握手
+#   * 一发 TLS ClientHello（SNI=github.com）就立刻被 RST（WinError 10054）
+#   => 这是 SNI 阻断，不是 DNS 污染。
+#   => 改 hosts 没用（TCP 通、TLS 被切；且 hosts 需要管理员，本会话不是管理员）
+#   => git -c url.<ip>.insteadOf 没用（TLS 仍发 SNI=github.com）
+#   => 镜像站 82.156.194.197/5219426 只有 /dl?url=<GitHub 链接> 一个功能，
+#      它是下载代理，没有 git 端点，不能 push。
+#   => 唯一可行：一个能完成 TLS 的代理，或离线 bundle。
+#
+# 本机实测：
 # 而 baidu / pypi 可达。所以这个脚本先诊断，再按可用路径推。
 #
 # 前置：GitHub 上已经建好一个空私库。脚本不建仓库 —— 建仓库要调 api.github.com，
