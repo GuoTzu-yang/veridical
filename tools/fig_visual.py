@@ -138,7 +138,12 @@ def check(figdir):
         rows.append(dict(fig=name, caption=cap[:110], title=best, sim=round(bsim, 2)))
 
     # B. 孤立图
+    # 原来硬编码 paper.tex，没有回退到 main.tex —— 于是对 aidc2026/big 那种
+    # 稿子（源文件叫 main.tex），整段 B 被 `if os.path.exists(p)` 跳过去，
+    # 报「孤立图 0 个」。实测该稿 13 个图全部没有被正文 \ref，一个都没报出来。
     p = os.path.join(figdir, "paper.tex")
+    if not os.path.exists(p):
+        p = os.path.join(figdir, "main.tex")
     if os.path.exists(p):
         t = io.open(p, encoding="utf-8", errors="replace").read()
         refs = set(re.findall(r"\\ref\{([^}]*)\}", t))
