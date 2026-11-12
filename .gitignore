@@ -6,6 +6,7 @@ external/
 # 大纲与调查类文档通过 ! 规则单独保留。
 out/**
 !out/Q2大纲*.md
+!out/交接-*.md
 !out/围栏有效性调查.md
 !out/数字类别分布.md
 !out/文献与论证对照.md
