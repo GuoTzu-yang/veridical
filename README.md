@@ -14,7 +14,33 @@
 > Dependency caches (external/, 1.4 GB) and generated artefacts (out/) are
 > excluded; hand-written outlines under out/ are kept via ! rules.
 
+------
+
+## 怎么推到 GitHub
+
+本机 **github.com:443 不可达**（实测 DNS 污染，解析到 104.244.46.165，Twitter 的 IP 段），
+aidu / pypi 可达。所以推送要按可用路径选：
+
+`powershell
+.\push.ps1 -DryRun      # 只诊断：连得上吗、几个提交、走哪条路
+.\push.ps1              # 自动选路径推
+.\push.ps1 -Mirror      # 走 ghproxy 镜像
+`
+
+git 不在 PATH 里，脚本会自动找 GitHub Desktop 自带的那份。
+
+**完全离线也能带走**：仓库上层有 model1-arch.bundle（2.7 MB，含完整历史）。
+
+`powershell
+git clone model1-arch.bundle model1-arch
+cd model1-arch
+git remote add origin <空仓库地址>
+git push -u origin main
+`
+
 ---
+
+
 
 # model1 架构 · 三个真瓶颈的可执行改造
 
