@@ -1,3 +1,21 @@
+> **REPOSITORY BOUNDARY — read this first**
+>
+> This repository is the **verification layer** (a working bench for LLM-driven
+> modelling), **not a competition submission**. Competition work lives beside it
+> in the same workspace and is **not tracked here**:
+> `aidc2026`, `apmcm2026`, `seekdb-2026-competition`, `ob2026`,
+> `lanqiao-ai-18`, `mv/`, `mv2/`, `mv3/`.
+>
+> * CHANGELOG.md — what changed in each round, with the measurements.
+> * HANDOFF.md — the current state, next steps, and five traps.
+> * AGENTS.md — the standing rules.
+> * 插件速查.md — one-page command reference.
+>
+> Dependency caches (external/, 1.4 GB) and generated artefacts (out/) are
+> excluded; hand-written outlines under out/ are kept via ! rules.
+
+---
+
 # model1 架构 · 三个真瓶颈的可执行改造
 
 原图有一处硬伤：三个关键节点只有名字，没有判据。
