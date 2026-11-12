@@ -59,6 +59,7 @@ gate（out/final，35 项）
 | **R122** | 发现「7 个角色掩盖 5 段没人审的正文」 | 已修，比例关系钉进 `selftest` |
 | **R123** | 冻结表 `generated_from`、`significance` 门、`prompt` 门、`figure` 下限、文献下限 | 全部进 gate |
 | **R124** | `proof` 门、`iterlog` 门、`fig_visual`（图的内容）、`paper_pipeline`、`paper_hygiene`、`redteam_orchestrate auto`、`bootstrap_ci`、A/B 对照实验 | 见状态段 |
+| **R124 末** | `check_write.py`（写后控制字符校验）、`numeric_genre.py`（数字四类）、`handoff.py`；门 33→35；项目定位升级为「鉴真 / veridical」；十份 Q2 大纲 | 见 `out/交接-第102轮.md` |
 
 **35 道门的分布**（硬 12 / 软 23）：
 
@@ -132,6 +133,8 @@ gate（out/final，35 项）
 | `out/final/` | 工具论文（30 页）+ 冻结表 818 条 + 24 张图 |
 | `out/d2026c/` | DWTS 竞赛稿（19 页）+ 12 板红队 30 条 finding |
 | `out/_阅卷细则.md` `out/_阅卷入口.md` | 阅卷器判据（23 项，6 否决 + 17 扣分） |
+| **`out/交接-第102轮.md`** | **本次会话的交接**：改了什么、发现了什么、不修的那个问题、GitHub 状态、Q2 判决 |
+| `out/Q2大纲-终稿.md` | Q2 论文大纲（376 行，唯一必读；其余 v1–v9 是过程记录） |
 | `tools/grade.py` | 阅卷器，`--selftest` 自校 |
 | `C:\Users\21246\Desktop\AB对照实验\` | A/B 两份完整提交 + 分析 + 四张对比图 |
 | `C:\Users\21246\Documents\_sealed_answers\` | 实验组封存副本 + 封存记录 |

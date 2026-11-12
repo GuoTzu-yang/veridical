@@ -217,6 +217,50 @@ python tools/fence_mutation.py     # 期望「假测试 0/4」
 
 ---
 
+## 转义规矩（第 124 轮，硬规矩）
+
+**这一条不是「AI 的失误」，是工具链缺防呆。** 本项目的写文件操作有一半是经
+PowerShell 的 heredoc (`@"..."@`) 传给 python 的，而 **PowerShell 用反引号做转义**，
+于是这些字符被静默改写：
+
+| 写了 | 变成 | 后果 |
+|---|---|---|
+| `` `a `` | **BEL** (`\x07`) | 看不见，但 `` `aidc2026` `` 变成 `<BEL>idc2026` |
+| `` `t `` | **TAB** (`\x09`) | 在 Markdown 表格里破坏对齐 |
+| `` `b `` | **BS** (`\x08`) | `` `baidu` `` 变成 `<BS>aidu` |
+| `` `f `` | **FF** (`\x0c`) | `` `falsify` `` 变成 `<FF>alsify` |
+| `` `n `` | **LF** | 字符串里凭空多一个换行 |
+
+**实测踩到 6 次**，其中 3 处污染一直留到了 v8 和 README 里，是 `check_write.py` 抓出来的
+（`` `analysis` ``/`` `falsify` ``/`` `ai_taste` `` 三个词的开头各被吃掉）。
+
+### 两条规矩
+
+1. **含反斜杠、反引号、引号的内容，用 `write` 工具直接写，不经过 shell。**
+   这是第一道防线，但它靠记性。
+2. **写后跑 `python tools/check_write.py <file>`。** 这是兜底，因为它不靠记性。
+
+### 工具抓什么
+
+| 类 | 判据 |
+|---|---|
+| **BEL / NUL / BS / FF / ESC** | 任何文本文件都不该有 |
+| **TAB** | `.md` / `.json` / `.txt` 里禁止（`.py` / `.tex` 允许） |
+| **零宽字符**（`\u200b` / `\u200c` / `\u200d`） | 任何文本文件都不该有 |
+| **UTF-16 BOM** | `out/` 下 48 个 `.txt` 就是这样——**PowerShell 的 `>` 默认写 UTF-16** |
+| **CR/LF 混用** | 同一文件里不许混 |
+| **BOM 出现在文件内部** | 只许在开头 |
+
+```powershell
+& $py tools\check_write.py --selftest          # 先自校：干净样本放行，三类污染抓住
+& $py tools\check_write.py AGENTS.md README.md # 扫指定文件
+& $py tools\check_write.py --dir out           # 扫目录
+```
+
+**自校用的是构造样本**（4 个：1 干净 + TAB/BEL/零宽各 1），不是读当前文件——按围栏规矩。
+
+---
+
 ## 图必须逐张打开看（第 124 轮，硬规矩）
 
 **用户点出来的缺口。** `figcheck` 只看技术规格：DPI / 尺寸 / 背景色 / 长宽比 / 是否矢量。

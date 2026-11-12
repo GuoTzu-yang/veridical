@@ -19,7 +19,7 @@
 ## 怎么推到 GitHub
 
 本机 **github.com:443 不可达**（实测 DNS 污染，解析到 104.244.46.165，Twitter 的 IP 段），
-aidu / pypi 可达。所以推送要按可用路径选：
+`baidu` / pypi 可达。所以推送要按可用路径选：
 
 `powershell
 .\push.ps1 -DryRun      # 只诊断：连得上吗、几个提交、走哪条路
