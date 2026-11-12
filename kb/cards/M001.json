@@ -1,0 +1,35 @@
+{
+  "id": "M001",
+  "name": "Linear regression with k-fold structure selection",
+  "name_cn": "线性回归 + k 折选型",
+  "when": "响应连续、因子连续，要估计单个因子的偏效应，且要在几个候选结构里选一个",
+  "when_not": "响应是有界比例（0-1）或计数 → 该用 GLM；因子全是类别 → 该用 ANOVA",
+  "assumptions": [
+    "The response is approximately linear in the factors over the sampled region: the residuals show no systematic curvature against fitted values.",
+    "Residual variance is constant, or robust standard errors are used and said to be used; the Breusch-Pagan statistic records which applies.",
+    "Observations are mutually independent. Repeated measurements, nested groups, or serial time dependence violate this.",
+    "No single observation dominates the fit: no Cook distance exceeds 1."
+  ],
+  "breaks_when": [
+    "The response is bounded or a proportion: a linear predictor can leave the admissible range, and coefficients stop being marginal effects.",
+    "Two or more factors are nearly collinear (design condition number above 1000): individual coefficients become uninterpretable even though predictions may still be accurate.",
+    "Fewer than about 20 observations: fold-to-fold variance is large enough that the cross-validated error is itself unstable.",
+    "An unobserved confounder is present: the coefficient is an association, not an effect, and must not be written as one."
+  ],
+  "report_must_include": [
+    "sample size $n$",
+    "number of folds $k$",
+    "cross-validated RMSE",
+    "the coefficient of determination $R^2$",
+    "Breusch-Pagan statistic and its critical value"
+  ],
+  "refs": [
+    "Stone, M. (1974). Cross-validatory choice and assessment of statistical predictions. Journal of the Royal Statistical Society B, 36(2), 111-147.",
+    "Breusch, T. S. and Pagan, A. R. (1979). A simple test for heteroscedasticity and random coefficient variation. Econometrica, 47(5), 1287-1294."
+  ],
+  "our_impl": "mm.fit / mm.ols_summary / mm.robustness",
+  "strength": {
+    "The response is approximately linear in the factors over the sampled range": "strong",
+    "Residual variance is constant, or robust standard errors are used": "weak"
+  }
+}

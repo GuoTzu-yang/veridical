@@ -1,0 +1,186 @@
+{
+ "heat_sink": {
+  "data": null,
+  "y": "热阻",
+  "x": "宽度,深高,排数",
+  "min": "热阻,压降,温度",
+  "problem": "heat sink",
+  "out": "out/runs/heat_sink"
+ },
+ "evaluation": {
+  "data": "evaluation.xlsx",
+  "y": "综合得分",
+  "x": "采购成本,质量评分,交付周期",
+  "min": "综合得分,客户满意度,售后成本",
+  "problem": "supplier evaluation by weighted scoring",
+  "out": "out/runs/evaluation"
+ },
+ "prediction": {
+  "data": "prediction.xlsx",
+  "y": "销量",
+  "x": "月份,单价,广告投入",
+  "min": "销量,库存,退货量",
+  "problem": "forecast monthly sales from price and advertising",
+  "out": "out/runs/prediction"
+ },
+ "network": {
+  "data": "network.xlsx",
+  "y": "运输量",
+  "x": "距离,容量,单位成本",
+  "min": "运输量,距离,单位成本",
+  "problem": "transport network flow under capacity constraints",
+  "out": "out/runs/network"
+ },
+ "queueing": {
+  "data": "queueing.xlsx",
+  "y": "等待时间",
+  "x": "到达人数,服务台数",
+  "min": "等待时间,人工成本,客户流失",
+  "problem": "simulation of queueing waiting time vs staffing cost",
+  "out": "out/runs/queueing"
+ },
+ "population": {
+  "data": "population.xlsx",
+  "y": "人口",
+  "x": "年份,食物供给",
+  "min": "人口,资源消耗,城市化率",
+  "problem": "population growth projection under resource limits",
+  "out": "out/runs/population"
+ },
+ "clustering": {
+  "data": "clustering.xlsx",
+  "y": "客户价值",
+  "x": "消费金额,购买频次,最近购买天数",
+  "min": "客户价值,消费金额,最近购买天数",
+  "problem": "customer segmentation by clustering",
+  "out": "out/runs/clustering"
+ },
+ "multiobjective": {
+  "data": "multiobjective.xlsx",
+  "y": "综合效益",
+  "x": "产量,单位成本,能耗",
+  "min": "产量,单位成本,能耗",
+  "problem": "production planning with conflicting objectives",
+  "out": "out/runs/multiobjective"
+ },
+ "simulation": {
+  "data": "simulation.xlsx",
+  "y": "平均队长",
+  "x": "到达率,服务率,服务台数",
+  "min": "平均队长,平均等待,系统利用率",
+  "problem": "monte carlo simulation of queue length under random arrivals",
+  "out": "out/runs/simulation"
+ },
+ "chemical": {
+  "data": "scope_test.xlsx",
+  "y": "产量",
+  "x": "反应温度,操作压力,停留时间",
+  "min": "产量,能耗,次品率",
+  "problem": "chemical reactor yield against operating conditions",
+  "out": "out/runs/chemical"
+ },
+ "real_c2023": {
+  "data": "real_hs.xlsx",
+  "y": "CBTS",
+  "x": "母亲年龄,妊娠时间（周数）,睡醒次数",
+  "min": "CBTS,EPDS,HADS",
+  "problem": "infant sleep quality and maternal mood regression",
+  "out": "out/runs/real_c2023"
+ },
+ "real_c2024": {
+  "data": "real_hs2024.xlsx",
+  "y": "yield_per_mu",
+  "x": "cost_per_mu",
+  "min": "yield_per_mu,cost_per_mu",
+  "problem": "crop yield against planting cost",
+  "out": "out/runs/real_c2024"
+ },
+ "icm2006c": {
+  "data": "icm2006c.xlsx",
+  "y": "pop2005",
+  "x": "pop1950,pop1980,pop1990,pop2000,life1995,life2005",
+  "min": "pop2005,life2005",
+  "problem": "population growth and life expectancy across countries",
+  "out": "out/runs/icm2006c"
+ },
+ "mcm2020c": {
+  "data": "mcm2020c.xlsx",
+  "y": "helpful_votes",
+  "x": "star_rating,total_votes,review_headline_len,body_len",
+  "min": "helpful_votes,total_votes,star_rating",
+  "problem": "which review features drive helpfulness votes",
+  "out": "out/runs/mcm2020c"
+ },
+ "pop_panel": {
+  "data": "pop_panel.xlsx",
+  "y": "2005",
+  "x": "1950,1951,1952,1953",
+  "min": "2005,1950,1951",
+  "problem": "population growth path of each country",
+  "out": "out/runs/pop_panel"
+ },
+ "age_struct": {
+  "data": "age_struct.xlsx",
+  "y": "80 - 84",
+  "x": "0 - 4,15 - 19,20 - 24,25 - 29,30 - 34",
+  "min": "80 - 84,0 - 4,20 - 24",
+  "problem": "age structure of national populations: young cohorts against the elderly",
+  "out": "out/runs/age_struct"
+ },
+ "life_exp": {
+  "data": "life_exp.xlsx",
+  "y": "2045-2050",
+  "x": "1950-1955,1955-1960,1960-1965,1965-1970",
+  "min": "2045-2050,1950-1955,1955-1960",
+  "problem": "life expectancy across countries and periods",
+  "out": "out/runs/life_exp"
+ },
+ "birth_rate": {
+  "data": "birth_rate.xlsx",
+  "y": "2000-2005",
+  "x": "1950-1955,1955-1960,1960-1965,1965-1970",
+  "min": "2000-2005,1950-1955,1955-1960",
+  "problem": "birth rate trend across countries",
+  "out": "out/runs/birth_rate"
+ },
+ "fertility": {
+  "data": "fertility.xlsx",
+  "y": "Age 45 - 49",
+  "x": "Age 15 - 19,Age 20 - 24,Age 25 - 29,Age 30 - 34",
+  "min": "Age 45 - 49,Age 15 - 19,Age 20 - 24",
+  "problem": "fertility by age band across countries",
+  "out": "out/runs/fertility"
+ },
+ "nflis": {
+  "data": "nflis.xlsx",
+  "y": "TotalDrugReportsState",
+  "x": "YYYY,FIPS_State,FIPS_County,FIPS_Combined",
+  "min": "TotalDrugReportsState,YYYY,FIPS_State",
+  "problem": "drug report counts across states and years",
+  "out": "out/runs/nflis"
+ },
+ "review_microwave": {
+  "data": "review_microwave.xlsx",
+  "y": "total_votes",
+  "x": "star_rating,helpful_votes",
+  "min": "total_votes,star_rating,helpful_votes",
+  "problem": "which review features drive helpfulness votes",
+  "out": "out/runs/review_microwave"
+ },
+ "review_pacifier": {
+  "data": "review_pacifier.xlsx",
+  "y": "total_votes",
+  "x": "star_rating,helpful_votes",
+  "min": "total_votes,star_rating,helpful_votes",
+  "problem": "which review features drive helpfulness votes",
+  "out": "out/runs/review_pacifier"
+ },
+ "dwts2026c": {
+  "data": "dwts2026c.xlsx",
+  "y": "placement",
+  "x": "judge_avg,age,n_weeks",
+  "min": "",
+  "problem": "2026 MCM Problem C - Dancing with the Stars fan-vote reconstruction",
+  "out": "out/d2026c"
+ }
+}

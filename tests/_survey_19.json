@@ -1,0 +1,275 @@
+{
+  "n": 19,
+  "has_case": 0,
+  "has_rec": 0,
+  "has_docs": 13,
+  "has_clue": 19,
+  "full": 0,
+  "rows": [
+    {
+      "n": 1440,
+      "title": "[Bug]: Performance regression: Range-to-OR e",
+      "body": 5910,
+      "comments": 2,
+      "case": false,
+      "docs": false,
+      "record": false,
+      "clue": [
+        "Performance",
+        "regression",
+        "Range"
+      ]
+    },
+    {
+      "n": 1469,
+      "title": "[Bug]: Keep DDL identifier escaping out of t",
+      "body": 1310,
+      "comments": 0,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "identifier",
+        "upper",
+        "layer"
+      ]
+    },
+    {
+      "n": 1470,
+      "title": "[Bug]: Performance bug: equivalent COSINE an",
+      "body": 3070,
+      "comments": 6,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "Performance",
+        "equivalent",
+        "difference"
+      ]
+    },
+    {
+      "n": 1471,
+      "title": "[Bug]: Performance bug: unfiltered and tauto",
+      "body": 2951,
+      "comments": 1,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "Performance",
+        "difference"
+      ]
+    },
+    {
+      "n": 1472,
+      "title": "[Bug]: Performance bug: filtered full-table ",
+      "body": 3118,
+      "comments": 2,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "Performance",
+        "table",
+        "difference"
+      ]
+    },
+    {
+      "n": 1477,
+      "title": "[Bug]: IFNULL with a boolean scalar subquery",
+      "body": 2487,
+      "comments": 4,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "scalar",
+        "subquery",
+        "double"
+      ]
+    },
+    {
+      "n": 1480,
+      "title": "[Bug]: UUID initialization fails to obtain a",
+      "body": 5220,
+      "comments": 2,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "standalone",
+        "server",
+        "startup"
+      ]
+    },
+    {
+      "n": 1489,
+      "title": "[Bug]: Performance bug: Equivalent OR-FALSE ",
+      "body": 5432,
+      "comments": 1,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "Performance",
+        "Equivalent",
+        "filter"
+      ]
+    },
+    {
+      "n": 1492,
+      "title": "[Enhancement]: Remove per-transaction TraceL",
+      "body": 3647,
+      "comments": 4,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "Enhancement",
+        "Remove",
+        "transaction"
+      ]
+    },
+    {
+      "n": 1501,
+      "title": "[Bug]: Performance bug: Equivalent BETWEEN t",
+      "body": 5377,
+      "comments": 5,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "Performance",
+        "Equivalent",
+        "transformation"
+      ]
+    },
+    {
+      "n": 1511,
+      "title": "[Bug]: Performance bug: Equivalent NOT-IN an",
+      "body": 8633,
+      "comments": 0,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "Performance",
+        "Equivalent",
+        "search"
+      ]
+    },
+    {
+      "n": 1512,
+      "title": "[Bug]: Performance bug: Equivalent duplicate",
+      "body": 7475,
+      "comments": 0,
+      "case": false,
+      "docs": false,
+      "record": false,
+      "clue": [
+        "Performance",
+        "Equivalent",
+        "duplicate"
+      ]
+    },
+    {
+      "n": 1513,
+      "title": "[Bug]: Performance bug: Equivalent set-compl",
+      "body": 6762,
+      "comments": 0,
+      "case": false,
+      "docs": false,
+      "record": false,
+      "clue": [
+        "Performance",
+        "Equivalent",
+        "complement"
+      ]
+    },
+    {
+      "n": 1519,
+      "title": "Table functions: common registration, bindin",
+      "body": 579,
+      "comments": 0,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "Table",
+        "common",
+        "binding"
+      ]
+    },
+    {
+      "n": 1523,
+      "title": "Encode PL composite result values consistent",
+      "body": 570,
+      "comments": 0,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "Encode",
+        "composite",
+        "result"
+      ]
+    },
+    {
+      "n": 1534,
+      "title": "[Bug]: Performance bug: Redundant filter con",
+      "body": 5607,
+      "comments": 0,
+      "case": false,
+      "docs": false,
+      "record": false,
+      "clue": [
+        "Performance",
+        "filter",
+        "search"
+      ]
+    },
+    {
+      "n": 1535,
+      "title": "[Bug]: Performance bug: Equivalent AND-absor",
+      "body": 5466,
+      "comments": 0,
+      "case": false,
+      "docs": false,
+      "record": false,
+      "clue": [
+        "Performance",
+        "Equivalent",
+        "search"
+      ]
+    },
+    {
+      "n": 1538,
+      "title": "[Bug]: Performance bug: Equivalent filters w",
+      "body": 6143,
+      "comments": 1,
+      "case": false,
+      "docs": false,
+      "record": false,
+      "clue": [
+        "Performance",
+        "Equivalent",
+        "arithmetic"
+      ]
+    },
+    {
+      "n": 1544,
+      "title": "[Bug]: Intermittent bootstrap OB_TIMEOUT whe",
+      "body": 4977,
+      "comments": 0,
+      "case": false,
+      "docs": true,
+      "record": false,
+      "clue": [
+        "bootstrap",
+        "fresh",
+        "database"
+      ]
+    }
+  ]
+}

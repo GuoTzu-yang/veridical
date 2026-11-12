@@ -1,0 +1,48 @@
+{"ts": 1794068685, "script": "ledger.py", "passed": true}
+{"ts": 1794133493, "script": "extend.py", "passed": false}
+{"ts": 1794133592, "script": "kb.py", "passed": false}
+{"ts": 1794133969, "script": "extend.py", "passed": false}
+{"ts": 1794134065, "script": "kb.py", "passed": false}
+{"ts": 1794181556, "script": "harness.py", "passed": true, "reason": "[FAIL] 能力不够 → 自动降级为 degrade  — actual=pass"}
+{"ts": 1794265117, "script": "lanes.py", "passed": false, "reason": "================================================================================"}
+{"ts": 1794265395, "script": "lanes.py", "passed": false, "reason": "================================================================================"}
+{"ts": 1794271416, "script": "chk_cross.py", "passed": false, "reason": "ALL PASS"}
+{"ts": 1794271417, "script": "rules_apmcm.py", "passed": false, "reason": "ALL PASS"}
+{"ts": 1794271417, "script": "verify_math.py", "passed": false, "reason": "[FAIL] 故意错                         实得 3               期望 2"}
+{"ts": 1794314717, "script": "chapters.py selftest", "passed": false, "reason": "C:\\Users\\21246\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe: can't open file 'C:\\\\Users\\\\21246\\\\"}
+{"ts": 1794314717, "script": "redteam.py selftest", "passed": false, "reason": "C:\\Users\\21246\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe: can't open file 'C:\\\\Users\\\\21246\\\\"}
+{"ts": 1794314717, "script": "untraced.py selftest", "passed": false, "reason": "C:\\Users\\21246\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe: can't open file 'C:\\\\Users\\\\21246\\\\"}
+{"ts": 1794314730, "script": "tools/verify_runbook.py", "passed": false, "reason": "[FAIL] 6  数字溯源（对已有论文）                      exit=1     0.1s  数字溯源：220/234 (94.0%)"}
+{"ts": 1794314739, "script": "gate.py", "passed": false, "reason": "[PASS] 硬门 FAIL 导致未通过"}
+{"ts": 1794315092, "script": "tools/verify_runbook.py", "passed": false, "reason": "[FAIL] 6  数字溯源（对已有论文）                      exit=1     0.1s  数字溯源：220/234 (94.0%)"}
+{"ts": 1794316982, "script": "gate.py", "passed": false, "reason": "[PASS] 硬门 FAIL 导致未通过"}
+{"ts": 1794317331, "script": "gate.py", "passed": false, "reason": "[PASS] 硬门 FAIL 导致未通过"}
+{"ts": 1794319981, "script": "gate.py", "passed": false, "reason": "[PASS] 硬门 FAIL 导致未通过"}
+{"ts": 1794320459, "script": "gate.py", "passed": false, "reason": "[PASS] 硬门 FAIL 导致未通过"}
+{"ts": 1794321029, "script": "gate.py", "passed": false, "reason": "[PASS] 硬门 FAIL 导致未通过"}
+{"ts": 1794321302, "script": "gate.py", "passed": false, "reason": "[PASS] 硬门 FAIL 导致未通过"}
+{"ts": 1794321541, "script": "gate.py", "passed": false, "reason": "[PASS] 硬门 FAIL 导致未通过"}
+{"ts": 1794323346, "script": "tools/verify_runbook.py", "passed": false, "reason": "[FAIL] 9  出稿前硬门                            exit=1     2.3s  质量门：未通过（硬门失败 1，警告 1，未适用 7）"}
+{"ts": 1794323348, "script": "patches.py", "passed": false, "reason": "ALL PASS  11/11"}
+{"ts": 1794323790, "script": "tools/verify_runbook.py", "passed": false, "reason": "[FAIL] 9  出稿前硬门                            exit=1     2.3s  质量门：未通过（硬门失败 1，警告 1，未适用 7）"}
+{"ts": 1794323792, "script": "patches.py", "passed": false, "reason": "ALL PASS  11/11"}
+{"ts": 1794324145, "script": "tools/verify_runbook.py", "passed": false, "reason": "[FAIL] 9  出稿前硬门                            exit=1     2.4s  质量门：未通过（硬门失败 1，警告 1，未适用 7）"}
+{"ts": 1794324147, "script": "patches.py", "passed": false, "reason": "ALL PASS  11/11"}
+{"ts": 1794325030, "script": "patches.py", "passed": false, "reason": "ALL PASS  12/12"}
+{"ts": 1794325380, "script": "patches.py", "passed": false, "reason": "ALL PASS  12/12"}
+{"ts": 1794329156, "script": "litsearch.py", "passed": false, "reason": "[FAIL] 抽到标题  — Author"}
+{"ts": 1794329805, "script": "litsearch.py", "passed": false, "reason": "[FAIL] 抽到标题  — Author"}
+{"ts": 1794332256, "script": "chapters.py", "passed": false, "reason": "[PASS] 空文档四项全 FAIL  — ['FAIL', 'FAIL', 'FAIL', 'FAIL']"}
+{"ts": 1794332273, "script": "tools/verify_runbook.py", "passed": false, "reason": "[FAIL] 9  出稿前硬门                            exit=1     2.2s  质量门：未通过（警告阻断：causal，草稿可用 --lenient 放行）（硬门失败 0，警告 1，未"}
+{"ts": 1794332621, "script": "chapters.py", "passed": false, "reason": "[PASS] 空文档四项全 FAIL  — ['FAIL', 'FAIL', 'FAIL', 'FAIL']"}
+{"ts": 1794336793, "script": "redteam.py", "passed": false, "reason": "[PASS] 没有 redteam.json → FAIL"}
+{"ts": 1794337134, "script": "redteam.py", "passed": false, "reason": "[PASS] 没有 redteam.json → FAIL"}
+{"ts": 1794337496, "script": "redteam.py", "passed": false, "reason": "[PASS] 没有 redteam.json → FAIL"}
+{"ts": 1794337874, "script": "redteam.py", "passed": false, "reason": "[PASS] 没有 redteam.json → FAIL"}
+{"ts": 1794379927, "script": "redteam.py", "passed": false, "reason": "[PASS] 没有 redteam.json → FAIL"}
+{"ts": 1794381348, "script": "redteam.py", "passed": false, "reason": "[PASS] 没有 redteam.json → FAIL"}
+{"ts": 1794408736, "script": "ledger.py", "passed": true, "reason": "========================================================================"}
+{"ts": 1794415761, "script": "tools/fence_acceptance.py", "passed": false, "reason": "[拦住  ] S9  编造 evidence                        FAIL｜restatement 的 evidence 在 out/final/paper.tex 里找不到：这句话在文件里不存在"}
+{"ts": 1794457611, "script": "tools/arch_invariants.py", "passed": false, "reason": "不成立：1 / 12"}
+{"ts": 1794458934, "script": "tools/arch_invariants.py", "passed": false, "reason": "不成立：1 / 12"}
+{"ts": 1794459484, "script": "ledger.py", "passed": true, "reason": "记账=True  重跑=False  TimeoutError: The read operation timed out"}

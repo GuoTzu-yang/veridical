@@ -1,0 +1,50 @@
+# ── 依赖缓存（可重装，1473 MB）──
+external/
+
+# ── 产物（220 MB）──
+# 注意：out/ 里既有产物也有少量手写文档（如 Q2大纲*.md、看板）。
+# 大纲与调查类文档通过 ! 规则单独保留。
+out/**
+!out/Q2大纲*.md
+!out/围栏有效性调查.md
+!out/数字类别分布.md
+!out/文献与论证对照.md
+!out/围栏三源对照.md
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ── 临时与归档 ──
+_removed_*/
+*.tmp
+*.log.bak
+~$*
+
+# ── 编辑器 ──
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ── 大件（>10 MB，不进 git）──
+*.zip
+*.7z
+*.tar.gz
+*.pkl
+*.npy
+*.npz
+*.h5
+
+# ── 不允许进库的 ──
+# 题面与封存答案（含完整题目，禁止泄漏到任何会被其他会话读取的地方）
+_sealed_answers/
+题目.md
+**/题目.md
+**/题目.txt
+*.token
+*.key
+.env

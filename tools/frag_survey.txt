@@ -1,0 +1,15 @@
+Previous work on this class of problem falls into three lines. Microchannel
+heat sinks are established to raise the convective coefficient through
+boundary-layer disruption, and the pressure penalty of doing so is
+quantified in the same literature. Manifold-based distribution was
+proposed to shorten the effective channel length, and its effect on flow
+uniformity is documented for embedded microchannel cooling. On the
+statistical side, the cross-validatory argument for choosing among
+nested specifications, and the limit of what an in-sample criterion can
+decide, are set out by Stone \cite{stone1974}, while the treatment of
+several conflicting objectives as a programme rather than a single index
+follows Deb \cite{deb2001}. This report sits at the junction: it takes
+the mechanism from the first line, the model-selection discipline from
+the second, and treats the three indicators as an explicit
+multi-objective programme instead of collapsing them into one weighted
+number.

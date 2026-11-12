@@ -1,0 +1,32 @@
+﻿替换 5/5 处
+
+  章节结构：
+    Introduction
+    Assumptions and Notations
+      Assumptions
+      Notation
+    Problem 1: How the geometry governs thermal resistance
+      Analysis
+      Model
+      Optimal design problem
+    Problem 2: Solution and results
+      The three models and why all three are needed
+      Model structure selection
+      Goodness of fit and transformation robustness
+    Problem 3: How stable are the conclusions?
+    Evaluation
+      Strengths
+      Limitations
+    AI Disclosure and Human Verification
+      Declaration
+      Human verification
+    Core Code
+竞赛规则检查：7/7 通过
+  [PASS] I002 创新只有三类
+  [PASS] I003 三模型（基准/主/对照）
+  [PASS] I004 三大检验
+  [PASS] I005 核心建模人工核验
+  [PASS] I006 AI 使用声明
+  [PASS] I007 按小问组织
+  [PASS] I008 版式（无目录/节数）
+  [人工] I001 文字表述权重 35%（四轴最大）

@@ -1,0 +1,13 @@
+\subsection{Where the numbers come from}
+The three design factors and the three performance indicators are taken
+from the statement and from the attached data set; no value in this report
+is imported from an external source. The factor ranges that bound the
+feasible set are the ranges actually observed in the data, so every point
+in the optimisation is a design that has been measured rather than
+interpolated, and the prediction intervals reported later widen exactly
+where that guarantee stops. The three model forms were selected by
+cross-validated error on the attached data, so the coefficients are
+estimates from this sample and not constants carried over from the
+literature; the only quantities imported from outside are the flow
+regime and the correlation structure, and both are stated with their
+conditions rather than applied silently.

@@ -1,0 +1,1381 @@
+{
+  "generated_at": "2026-11-12T12:55:42",
+  "source": "mmkit.py",
+  "n_commands": 23,
+  "n_declared_args": 67,
+  "global_args": {
+    "--data": {
+      "type": "str",
+      "default": "\"\"",
+      "help": "",
+      "dest": "data"
+    },
+    "--json": {
+      "type": "bool",
+      "default": null,
+      "help": "",
+      "dest": "json"
+    },
+    "--sheet": {
+      "type": "str",
+      "default": "None",
+      "help": "",
+      "dest": "sheet"
+    },
+    "--x": {
+      "type": "str",
+      "default": "\"\"",
+      "help": "",
+      "dest": "x"
+    },
+    "--y": {
+      "type": "str",
+      "default": "\"\"",
+      "help": "",
+      "dest": "y"
+    }
+  },
+  "commands": {
+    "advise": {
+      "desc": "定题：判断题型（关系与解释/预测/优化/评价）+ 逐条可复核依据。**建模第一步**，先用它确认方向再选工具",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--max": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "越大越好的目标列",
+          "dest": "max"
+        },
+        "--min": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "越小越好的目标列",
+          "dest": "min"
+        },
+        "--problem": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "题目的一句话描述，写进摘要",
+          "dest": "problem"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        },
+        "--types": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "advise：显式声明题型（逗号分隔）。",
+          "dest": "types"
+        },
+        "--x": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "x"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 9,
+      "uses_global": [
+        "data",
+        "json",
+        "sheet",
+        "x",
+        "y"
+      ]
+    },
+    "ahp": {
+      "desc": "层次分析：判断矩阵 --ahp 求权重，带一致性检验",
+      "args": {
+        "--ahp": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "两两比较矩阵，行用 | 分隔： ",
+          "dest": "ahp"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--names": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "AHP 的指标名，逗号分隔",
+          "dest": "names"
+        }
+      },
+      "n_args": 3,
+      "uses_global": [
+        "json"
+      ]
+    },
+    "clean": {
+      "desc": "清洗：列名英文化（--names-out）、导出 CSV",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--names-out": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "列名映射 CSV 的输出路径（可选）",
+          "dest": "names_out"
+        },
+        "--out-csv": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "干净 CSV 的输出路径，默认 out/clean.csv",
+          "dest": "out_csv"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        }
+      },
+      "n_args": 4,
+      "uses_global": [
+        "data",
+        "sheet"
+      ]
+    },
+    "cluster": {
+      "desc": "聚类：--x 选变量、--k 定簇数，出划分与簇质量",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--k": {
+          "type": "int",
+          "choices": null,
+          "default": "0",
+          "help": "cluster 的簇数；0 = 自动选",
+          "dest": "k"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        },
+        "--x": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "x"
+        }
+      },
+      "n_args": 5,
+      "uses_global": [
+        "data",
+        "json",
+        "sheet",
+        "x"
+      ]
+    },
+    "contract": {
+      "desc": "提案契约：把一次建模提案写成可检查的 JSON（--proposal），缺字段/越界会当场指出",
+      "args": {
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--proposal": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "contract 要校验的提案文件",
+          "dest": "proposal"
+        }
+      },
+      "n_args": 2,
+      "uses_global": [
+        "json"
+      ]
+    },
+    "dim": {
+      "desc": "量纲分析：--var '名字=量纲'（等号！）求 Buckingham Pi 群",
+      "args": {
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--var": {
+          "type": "str",
+          "choices": null,
+          "default": "[]",
+          "help": "dim 的变量，形如 周期=T 或 重力=L*T^-2",
+          "dest": "var"
+        }
+      },
+      "n_args": 2,
+      "uses_global": [
+        "json"
+      ]
+    },
+    "experiment": {
+      "desc": "试错循环：propose → exec → judge → 下一轮，--rounds 定轮数、--budget 定预算，产出「试过什么、否掉了什么」",
+      "args": {
+        "--budget": {
+          "type": "float",
+          "choices": null,
+          "default": "45.0",
+          "help": "experiment 的总预算分钟数",
+          "dest": "budget"
+        },
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--no-contract": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "experiment 跳过提案契约校验（默认会先过契约）",
+          "dest": "no_contract"
+        },
+        "--propose-json": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "外部提案文件（LLM 写）；留空用规则版 propose",
+          "dest": "propose_json"
+        },
+        "--rounds": {
+          "type": "int",
+          "choices": null,
+          "default": "5",
+          "help": "experiment 的最大轮数，默认 5",
+          "dest": "rounds"
+        },
+        "--routes": {
+          "type": "int",
+          "choices": null,
+          "default": "3",
+          "help": "每轮提几条路线，默认 3（契约要求 >=3）",
+          "dest": "routes"
+        }
+      },
+      "n_args": 7,
+      "uses_global": [
+        "data",
+        "json"
+      ]
+    },
+    "forecast": {
+      "desc": "时间序列预测：--t 时间轴、--y 目标，外推 --horizon 步",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--horizon": {
+          "type": "int",
+          "choices": null,
+          "default": "5",
+          "help": "forecast 的预测步数",
+          "dest": "horizon"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        },
+        "--t": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "forecast 的时间列（留空用行序）",
+          "dest": "t"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 6,
+      "uses_global": [
+        "data",
+        "json",
+        "sheet",
+        "y"
+      ]
+    },
+    "fuzzy": {
+      "desc": "模糊综合评价（与 greyrel 同一分支）：--membership 隶属度、--grades 等级、--weights/--ahp 权重",
+      "args": {
+        "--ahp": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "两两比较矩阵，行用 | 分隔： ",
+          "dest": "ahp"
+        },
+        "--directions": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "greyrel 的指标方向，如 1,-1,1（越大越好 / 越小越好）",
+          "dest": "directions"
+        },
+        "--grades": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "fuzzy 的等级分值，如 95,85,75",
+          "dest": "grades"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--matrix": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "距离矩阵，行用 | 隔开（tsp 用）",
+          "dest": "matrix"
+        },
+        "--membership": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "fuzzy 的隶属度矩阵，行用 ; 隔开",
+          "dest": "membership"
+        },
+        "--names": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "AHP 的指标名，逗号分隔",
+          "dest": "names"
+        },
+        "--normalize": {
+          "type": "str",
+          "choices": [
+            "init",
+            "mean",
+            "range"
+          ],
+          "default": "\"mean\"",
+          "help": "greyrel 的归一化方式",
+          "dest": "normalize"
+        },
+        "--operator": {
+          "type": "str",
+          "choices": [
+            "weighted",
+            "maxmin"
+          ],
+          "default": "\"weighted\"",
+          "help": "fuzzy 的合成算子",
+          "dest": "operator"
+        },
+        "--ref": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "greyrel 的参考序列（留空用理想解）",
+          "dest": "ref"
+        },
+        "--rho": {
+          "type": "float",
+          "choices": null,
+          "default": "0.5",
+          "help": "greyrel 的分辨系数，默认 0.5",
+          "dest": "rho"
+        },
+        "--weights": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "fuzzy 的权重，如 0.3,0.3,0.4",
+          "dest": "weights"
+        }
+      },
+      "n_args": 12,
+      "uses_global": [
+        "json"
+      ]
+    },
+    "graph": {
+      "desc": "--op 四选一：dijkstra 最短路 / mst 最小生成树 / flow 最大流 / tsp 旅行商",
+      "args": {
+        "--edges": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "边表： ",
+          "dest": "edges"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--matrix": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "距离矩阵，行用 | 隔开（tsp 用）",
+          "dest": "matrix"
+        },
+        "--nodes": {
+          "type": "int",
+          "choices": null,
+          "default": "0",
+          "help": "节点数（留空按边里的最大下标推断）",
+          "dest": "nodes"
+        },
+        "--op": {
+          "type": "str",
+          "choices": [
+            "dijkstra",
+            "mst",
+            "flow",
+            "tsp"
+          ],
+          "default": "\"dijkstra\"",
+          "help": "graph 的算法",
+          "dest": "op"
+        }
+      },
+      "n_args": 5,
+      "uses_global": [
+        "json"
+      ]
+    },
+    "grey": {
+      "desc": "灰色预测 GM(1,1)：小样本序列外推，与 forecast 互为对照",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--horizon": {
+          "type": "int",
+          "choices": null,
+          "default": "5",
+          "help": "forecast 的预测步数",
+          "dest": "horizon"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--series": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "grey 的时间序列，逗号分隔： 2.874,3.278,...",
+          "dest": "series"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 6,
+      "uses_global": [
+        "data",
+        "json",
+        "sheet",
+        "y"
+      ]
+    },
+    "greyrel": {
+      "desc": "灰色关联 + 模糊综合评价：--directions 定指标方向、--weights/--ahp 定权重、--membership/--grades 做模糊评。评价类题目的主力",
+      "args": {
+        "--ahp": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "两两比较矩阵，行用 | 分隔： ",
+          "dest": "ahp"
+        },
+        "--directions": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "greyrel 的指标方向，如 1,-1,1（越大越好 / 越小越好）",
+          "dest": "directions"
+        },
+        "--grades": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "fuzzy 的等级分值，如 95,85,75",
+          "dest": "grades"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--matrix": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "距离矩阵，行用 | 隔开（tsp 用）",
+          "dest": "matrix"
+        },
+        "--membership": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "fuzzy 的隶属度矩阵，行用 ; 隔开",
+          "dest": "membership"
+        },
+        "--names": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "AHP 的指标名，逗号分隔",
+          "dest": "names"
+        },
+        "--normalize": {
+          "type": "str",
+          "choices": [
+            "init",
+            "mean",
+            "range"
+          ],
+          "default": "\"mean\"",
+          "help": "greyrel 的归一化方式",
+          "dest": "normalize"
+        },
+        "--operator": {
+          "type": "str",
+          "choices": [
+            "weighted",
+            "maxmin"
+          ],
+          "default": "\"weighted\"",
+          "help": "fuzzy 的合成算子",
+          "dest": "operator"
+        },
+        "--ref": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "greyrel 的参考序列（留空用理想解）",
+          "dest": "ref"
+        },
+        "--rho": {
+          "type": "float",
+          "choices": null,
+          "default": "0.5",
+          "help": "greyrel 的分辨系数，默认 0.5",
+          "dest": "rho"
+        },
+        "--weights": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "fuzzy 的权重，如 0.3,0.3,0.4",
+          "dest": "weights"
+        }
+      },
+      "n_args": 12,
+      "uses_global": [
+        "json"
+      ]
+    },
+    "hints": {
+      "desc": "给出可复制的命令提示（含 --claim/--compile 的常用组合）",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        },
+        "--x": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "x"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 4,
+      "uses_global": [
+        "data",
+        "sheet",
+        "x",
+        "y"
+      ]
+    },
+    "merge": {
+      "desc": "多表合并：按共同列合并多个 sheet 或文件",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--out-csv": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "干净 CSV 的输出路径，默认 out/clean.csv",
+          "dest": "out_csv"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        }
+      },
+      "n_args": 3,
+      "uses_global": [
+        "data",
+        "sheet"
+      ]
+    },
+    "ode": {
+      "desc": "常微分方程：--rhs 给右端表达式，--method rk45|rk4",
+      "args": {
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--method": {
+          "type": "str",
+          "choices": [
+            "rk45",
+            "rk4"
+          ],
+          "default": "\"rk45\"",
+          "help": "",
+          "dest": "method"
+        },
+        "--rhs": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "ODE 右端，如 -0.7*y 或 sin(t)",
+          "dest": "rhs"
+        },
+        "--t0": {
+          "type": "float",
+          "choices": null,
+          "default": "0.0",
+          "help": "",
+          "dest": "t0"
+        },
+        "--t1": {
+          "type": "float",
+          "choices": null,
+          "default": "10.0",
+          "help": "",
+          "dest": "t1"
+        },
+        "--y0": {
+          "type": "float",
+          "choices": null,
+          "default": "1.0",
+          "help": "初值 y(t0)",
+          "dest": "y0"
+        }
+      },
+      "n_args": 6,
+      "uses_global": [
+        "json"
+      ]
+    },
+    "plot": {
+      "desc": "--kind 十六种图：scatter/forecast/bar/pareto/corr/pred/sens/flow/box/hist/resid/qq/tornado/cand/surface/surfaces",
+      "args": {
+        "--cost": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "评价题的成本型指标",
+          "dest": "cost"
+        },
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--horizon": {
+          "type": "int",
+          "choices": null,
+          "default": "5",
+          "help": "forecast 的预测步数",
+          "dest": "horizon"
+        },
+        "--k": {
+          "type": "int",
+          "choices": null,
+          "default": "0",
+          "help": "cluster 的簇数；0 = 自动选",
+          "dest": "k"
+        },
+        "--kind": {
+          "type": "str",
+          "choices": [
+            "scatter",
+            "forecast",
+            "bar",
+            "pareto",
+            "corr",
+            "pred",
+            "sens",
+            "flow",
+            "box",
+            "hist",
+            "resid",
+            "qq",
+            "tornado",
+            "cand",
+            "surface",
+            "surfaces"
+          ],
+          "default": "\"scatter\"",
+          "help": "plot 的图型",
+          "dest": "kind"
+        },
+        "--min": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "越小越好的目标列",
+          "dest": "min"
+        },
+        "--out-png": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "图片输出路径",
+          "dest": "out_png"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        },
+        "--steps": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "流程图节点，用 | 隔开（flow 图用）",
+          "dest": "steps"
+        },
+        "--x": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "x"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 11,
+      "uses_global": [
+        "data",
+        "sheet",
+        "x",
+        "y"
+      ]
+    },
+    "profile": {
+      "desc": "数据剖面：每列的分布、缺失、异常摘要",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        }
+      },
+      "n_args": 3,
+      "uses_global": [
+        "data",
+        "json",
+        "sheet"
+      ]
+    },
+    "race": {
+      "desc": "模型赛马：多个模型结构 x 多 seed 的交叉验证对比，出 RMSE/R2 表。要回答「为什么用这个模型」就跑它",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        },
+        "--x": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "x"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 5,
+      "uses_global": [
+        "data",
+        "json",
+        "sheet",
+        "x",
+        "y"
+      ]
+    },
+    "run": {
+      "desc": "一条龙：读数据到出 PDF 全自动。**自动模式**，会替你做掉所有建模决定 —— DSH 主导建模时不要用它",
+      "args": {
+        "--benefit": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "评价题的效益型指标",
+          "dest": "benefit"
+        },
+        "--claim": {
+          "type": "str",
+          "choices": null,
+          "default": "[]",
+          "help": "名字:正/负，可重复",
+          "dest": "claim"
+        },
+        "--compile": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "生成后就地 pdflatex 编译两遍",
+          "dest": "compile"
+        },
+        "--cost": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "评价题的成本型指标",
+          "dest": "cost"
+        },
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--delta": {
+          "type": "float",
+          "choices": null,
+          "default": "0.1",
+          "help": "",
+          "dest": "delta"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--lang": {
+          "type": "str",
+          "choices": null,
+          "default": "\"en\"",
+          "help": "论文语言（en/zh/ja/ko/fr/de/es/ru）",
+          "dest": "lang"
+        },
+        "--max": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "越大越好的目标列",
+          "dest": "max"
+        },
+        "--min": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "越小越好的目标列",
+          "dest": "min"
+        },
+        "--no-gate": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "跳过全量质量门（探索阶段用）",
+          "dest": "no_gate"
+        },
+        "--out": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "把报告写成 markdown 文件",
+          "dest": "out"
+        },
+        "--problem": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "题目的一句话描述，写进摘要",
+          "dest": "problem"
+        },
+        "--reproduced": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "声明已跨环境重跑（e3 才能到 2）",
+          "dest": "reproduced"
+        },
+        "--strict": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "出稿前强制过竞赛规则，不过就拒绝",
+          "dest": "strict"
+        },
+        "--team": {
+          "type": "str",
+          "choices": null,
+          "default": "\"000000\"",
+          "help": "队号，写进论文页眉，不写姓名学校",
+          "dest": "team"
+        },
+        "--tex": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "同时生成英文 LaTeX 论文，例如 paper.tex",
+          "dest": "tex"
+        },
+        "--x": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "x"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 19,
+      "uses_global": [
+        "data",
+        "json",
+        "x",
+        "y"
+      ]
+    },
+    "selftest": {
+      "desc": "自检：所有内置用例",
+      "args": {},
+      "n_args": 0,
+      "uses_global": []
+    },
+    "skeleton": {
+      "desc": "出稿骨架：--from-tex 从已生成的 tex 里列出可被 LLM 重写的段落（摘要、结论），--lang 选语言",
+      "args": {
+        "--from-tex": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "skeleton 从这个已生成的 tex 提取段落（key 必然对得上）",
+          "dest": "from_tex"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--lang": {
+          "type": "str",
+          "choices": null,
+          "default": "\"en\"",
+          "help": "论文语言（en/zh/ja/ko/fr/de/es/ru）",
+          "dest": "lang"
+        },
+        "--min": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "越小越好的目标列",
+          "dest": "min"
+        },
+        "--problem": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "题目的一句话描述，写进摘要",
+          "dest": "problem"
+        },
+        "--x": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "x"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 7,
+      "uses_global": [
+        "json",
+        "x",
+        "y"
+      ]
+    },
+    "solve": {
+      "desc": "约束优化：单目标最大化/最小化，或 --constraint 带约束；含 Pareto 前沿与膝点",
+      "args": {
+        "--constraint": {
+          "type": "str",
+          "choices": null,
+          "default": "[]",
+          "help": "形如 热阻<=0.74，可重复",
+          "dest": "constraint"
+        },
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--json": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "",
+          "dest": "json"
+        },
+        "--maximize": {
+          "type": "bool",
+          "choices": null,
+          "default": null,
+          "help": "solve 求最大",
+          "dest": "maximize"
+        },
+        "--obj": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "solve 的目标列（留空用 --y）",
+          "dest": "obj"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        },
+        "--x": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "x"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 8,
+      "uses_global": [
+        "data",
+        "json",
+        "sheet",
+        "x",
+        "y"
+      ]
+    },
+    "video": {
+      "desc": "GIF/MP4：把多张图串成逐帧动画",
+      "args": {
+        "--data": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "data"
+        },
+        "--frame-ms": {
+          "type": "int",
+          "choices": null,
+          "default": "900",
+          "help": "每帧停留毫秒数",
+          "dest": "frame_ms"
+        },
+        "--out-gif": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "视频输出路径，默认 out/fig/flow.gif",
+          "dest": "out_gif"
+        },
+        "--sheet": {
+          "type": "str",
+          "choices": null,
+          "default": "None",
+          "help": "",
+          "dest": "sheet"
+        },
+        "--x": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "x"
+        },
+        "--y": {
+          "type": "str",
+          "choices": null,
+          "default": "\"\"",
+          "help": "",
+          "dest": "y"
+        }
+      },
+      "n_args": 6,
+      "uses_global": [
+        "data",
+        "sheet",
+        "x",
+        "y"
+      ]
+    }
+  },
+  "metrics": {
+    "cv_rmse_max": {
+      "field": "cv_rmse",
+      "cmp": "<=",
+      "desc": "交叉验证 RMSE 上限"
+    },
+    "cv_rmse_min": {
+      "field": "cv_rmse",
+      "cmp": ">=",
+      "desc": "交叉验证 RMSE 下限"
+    },
+    "r2_min": {
+      "field": "r2",
+      "cmp": ">=",
+      "desc": "R² 下限"
+    },
+    "r2_max": {
+      "field": "r2",
+      "cmp": "<=",
+      "desc": "R² 上限"
+    },
+    "front_size_min": {
+      "field": "front",
+      "cmp": ">=",
+      "desc": "帕累托前沿点数下限"
+    },
+    "bp_max": {
+      "field": "bp",
+      "cmp": "<=",
+      "desc": "Breusch-Pagan 统计量上限"
+    },
+    "coverage_min": {
+      "field": "coverage",
+      "cmp": ">=",
+      "desc": "时间覆盖率下限"
+    },
+    "n_rows_min": {
+      "field": "n_rows",
+      "cmp": ">=",
+      "desc": "可用行数下限"
+    }
+  },
+  "note": "args 是「该子命令实际访问到的 a.xxx 且 argparse 里定义过」的交集。没列出来的参数即使定义了，该子命令也不读。"
+}

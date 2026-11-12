@@ -1,0 +1,293 @@
+{
+ "version": 5,
+ "note": "All strings must be ENGLISH: anything that lands in the .tex passes through a CJK guard that replaces Chinese with 'variable'. Probes are case-insensitive substrings searched in the lowercased body.",
+ "kinds": {
+  "mechanism": [
+   {
+    "name": "dimensional consistency or non-dimensionalisation",
+    "probes": [
+     "dimensionless",
+     "dimensionally",
+     "dimensional analysis"
+    ],
+    "note": "both sides of a mechanism equation must carry the same units"
+   },
+   {
+    "name": "limiting case or closed-form check",
+    "probes": [
+     "closed-form",
+     "special case",
+     "limiting case"
+    ],
+    "note": "a case with a known answer is the cheapest validation"
+   }
+  ],
+  "regression": [
+   {
+    "name": "influence or leverage diagnostics",
+    "probes": [
+     "leverage",
+     "influence",
+     "cook",
+     "outlier"
+    ],
+    "note": "a few points can decide the coefficients on their own"
+   },
+   {
+    "name": "collinearity diagnostics",
+    "probes": [
+     "condition number",
+     "collinear",
+     "vif",
+     "correlation matrix"
+    ],
+    "note": "under collinearity individual coefficients are not interpretable"
+   },
+   {
+    "name": "heteroskedasticity or normality test",
+    "probes": [
+     "breusch",
+     "heteroskedastic",
+     "shapiro",
+     "normality",
+     "skew"
+    ],
+    "note": "intervals and significance both rest on the variance assumption"
+   }
+  ],
+  "optimization": [
+   {
+    "name": "feasibility and optimality check",
+    "probes": [
+     "feasib",
+     "satisf",
+     "optimality gap",
+     "duality gap"
+    ],
+    "note": "whether the solution is feasible and whether it is optimal are two claims"
+   },
+   {
+    "name": "local-optimum risk if the search is non-convex",
+    "probes": [
+     "multi-start",
+     "multiple starting",
+     "restart",
+     "local optimum",
+     "global optimum",
+     "global minimum"
+    ],
+    "note": "'global' alone matches 'global market'; require the optimisation sense"
+   }
+  ],
+  "prediction": [
+   {
+    "name": "rolling or hold-out validation",
+    "probes": [
+     "walk-forward",
+     "rolling",
+     "expanding",
+     "hold-out",
+     "out-of-sample"
+    ],
+    "note": "time series cannot be validated by random-fold cross-validation alone"
+   },
+   {
+    "name": "stationarity or autocorrelation check",
+    "probes": [
+     "stationar",
+     "unit root",
+     "adf",
+     "autocorrel",
+     "acf",
+     "ljung"
+    ],
+    "note": "regressing a non-stationary series on another is spurious"
+   },
+   {
+    "name": "residual diagnostics for remaining structure",
+    "probes": [
+     "residual autocorrelation",
+     "ljung",
+     "durbin",
+     "acf of the residual",
+     "residuals are white"
+    ],
+    "note": "plain residual diagnostics belong to regression; this check is about structure *left in* them over time"
+   }
+  ],
+  "evaluation": [
+   {
+    "name": "normalisation direction and scale",
+    "probes": [
+     "normalised indicator",
+     "normalisation of the",
+     "normalised value",
+     "min-max",
+     "benefit indicator",
+     "cost indicator",
+     "direction of the indicator"
+    ],
+    "note": "a 'normalised gap' is a regret measure, not indicator normalisation; 'direction of association' is not indicator direction"
+   },
+   {
+    "name": "weight provenance and sensitivity",
+    "probes": [
+     "weight provenance",
+     "entropy weight",
+     "ahp",
+     "delphi",
+     "weight sensitiv",
+     "weights are",
+     "assigned weight"
+    ],
+    "note": "a weighted sum is arithmetic, not a justification of where the weights came from"
+   },
+   {
+    "name": "agreement between two evaluation methods",
+    "probes": [
+     "rank correlation",
+     "spearman",
+     "kendall",
+     "two methods agree",
+     "methods agree",
+     "ranking agree",
+     "consistency check between"
+    ],
+    "note": "'the relation stays consistent with theory' is not agreement between two evaluation methods"
+   }
+  ],
+  "clustering": [
+   {
+    "name": "basis for the number of clusters",
+    "probes": [
+     "elbow",
+     "silhouette",
+     "gap statistic",
+     "dendrogram",
+     "bic"
+    ],
+    "note": "the cluster count is a model parameter, not a taste"
+   },
+   {
+    "name": "stability of the partition",
+    "probes": [
+     "bootstrap",
+     "stability",
+     "replicat",
+     "consisten"
+    ],
+    "note": "a partition that changes with the seed is not a finding"
+   },
+   {
+    "name": "preconditions and distance metric",
+    "probes": [
+     "distance metric",
+     "euclidean",
+     "ward",
+     "spherical",
+     "standardis",
+     "standardiz"
+    ],
+    "note": "without standardisation the largest-variance variable dominates"
+   }
+  ],
+  "multiobjective": [
+   {
+    "name": "coverage and spread of the reported front",
+    "probes": [
+     "hypervolume",
+     "non-dominated",
+     "pareto front",
+     "spread of the front",
+     "front coverage",
+     "coverage of the front"
+    ],
+    "note": "'coverage of the literature' is not front coverage"
+   },
+   {
+    "name": "a rule for choosing among the front",
+    "probes": [
+     "minimax",
+     "regret",
+     "knee",
+     "compromise",
+     "topsis"
+    ],
+    "note": "the front itself does not select a design"
+   }
+  ],
+  "simulation": [
+   {
+    "name": "randomness source and seed",
+    "probes": [
+     "random seed",
+     "seeds were",
+     "seed the",
+     "stochastic simulation",
+     "monte carlo"
+    ],
+    "note": "the bare word 'random' appears in any paper that mentions randomness at all; require the seed"
+   },
+   {
+    "name": "replication count and convergence",
+    "probes": [
+     "converg",
+     "burn-in",
+     "replicat",
+     "confidence interval",
+     "standard error"
+    ],
+    "note": "too few replications make the reported interval fiction"
+   },
+   {
+    "name": "variance reduction or efficiency note",
+    "probes": [
+     "variance reduction",
+     "antithetic",
+     "control variate",
+     "importance sampling"
+    ],
+    "note": "can cut the variance without changing the estimand"
+   }
+  ],
+  "network": [
+   {
+    "name": "algorithmic complexity",
+    "probes": [
+     "algorithmic complexity",
+     "time complexity",
+     "polynomial time",
+     "np-hard",
+     "o(n",
+     "o(n log",
+     "asymptotic complexity"
+    ],
+    "note": "model complexity (a goodness-of-fit notion) is NOT algorithmic complexity; the probe must say which"
+   },
+   {
+    "name": "optimality or feasibility certificate",
+    "probes": [
+     "optimality gap",
+     "duality gap",
+     "proven optimal",
+     "lower bound",
+     "certificate",
+     "optimal solution",
+     "not a heuristic"
+    ],
+    "note": "'optimal design' means a good design, not a proof of optimality; the probe must say 'optimality'"
+   },
+   {
+    "name": "scale or runtime test",
+    "probes": [
+     "scalab",
+     "large instance",
+     "runtime",
+     "wall-clock",
+     "instance size"
+    ],
+    "note": "a sensitivity analysis is not a scale test; drop the generic word"
+   }
+  ]
+ }
+}

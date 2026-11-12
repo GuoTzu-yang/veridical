@@ -1,0 +1,80 @@
+{
+  "issue": 1440,
+  "grouping": {
+    "columns": 4,
+    "items": 5,
+    "merged": 1,
+    "conflicts": 1
+  },
+  "journal": {
+    "n": 15,
+    "changed": 2,
+    "rate": 0.133,
+    "by_type": {
+      "修正": 2,
+      "无变化": 13
+    }
+  },
+  "strength": {
+    "strength": "low",
+    "rate": 0.133,
+    "reason": "15 轮中 13 轮空转，该题型不值得循环"
+  },
+  "route": {
+    "route": "lite",
+    "hit": 0.2,
+    "probe_ports": 4,
+    "expand_ports": 0,
+    "calls_per_subq": 8,
+    "reason": "题型库未命中（0.20），拓展口全关——查空库没有意义"
+  },
+  "verdicts": {
+    "C_SQ1": {
+      "C": 2,
+      "final": "reject",
+      "blocked_at": "G2"
+    },
+    "C_SQ2": {
+      "C": 0,
+      "final": "reject",
+      "blocked_at": "G1"
+    },
+    "C_SQ3": {
+      "C": 3,
+      "final": "reject",
+      "blocked_at": "G2"
+    },
+    "C_SQ4": {
+      "C": 4,
+      "final": "degrade",
+      "blocked_at": null
+    },
+    "C_SQ5": {
+      "C": 2,
+      "final": "reject",
+      "blocked_at": "G2"
+    }
+  },
+  "fork": {
+    "forked": true,
+    "diverged": [
+      "改动模块",
+      "是否需改OR层"
+    ]
+  },
+  "missing": [
+    "bench/case_1440.sql",
+    "可运行实例",
+    "OR化简器位置"
+  ],
+  "ask_state": "TIMEOUT_DEFAULT",
+  "conclusion": {
+    "passed": [],
+    "rejected": [
+      "C_SQ1",
+      "C_SQ2",
+      "C_SQ3",
+      "C_SQ5"
+    ]
+  }
+}

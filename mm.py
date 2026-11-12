@@ -1,0 +1,2080 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+mm.py —— 数学建模解题插件（完整流程）
+
+不是检查表。是**从读数据到出论文表格**的整条线：
+
+    load   读附件（自动找表头、自动识别数值列）
+    eda    体检：缺失 / 异常 / 分布 / 相关 / 共线
+    fit    建模：候选结构竞速（线性/二次/对数/幂律/岭）+ K 折 CV
+    opt    优化：帕累托前沿 + 权重敏感性
+    score  评价：熵权法 + TOPSIS
+    sens   灵敏度：逐个输入扰动，看输出怎么动
+    judge  判定：每条结论走架构闸门，拿可信度凭证
+    report 汇总：一份能直接贴进论文的表
+
+一次全跑：
+    python mm.py all --data 附件.xlsx --y 热阻 --x 宽度,深高,排数
+
+单步：
+    python mm.py eda   --data 附件.xlsx
+    python mm.py fit   --data 附件.xlsx --y 热阻 --x 宽度,深高,排数
+    python mm.py opt   --data 附件.xlsx --min 热阻,压降,温度
+    python mm.py score --data 附件.xlsx --benefit 效率 --cost 成本
+    python mm.py sens  --data 附件.xlsx --y 热阻 --x 宽度,深高,排数
+
+依赖：numpy + openpyxl（不装 scipy / sklearn / pandas）
+"""
+
+from __future__ import annotations
+
+import argparse
+import glob
+import io
+import json
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+import numpy as np                                                  # noqa: E402
+import datapath                                                      # noqa: E402
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  load —— 读附件
+# ══════════════════════════════════════════════════════════════════════
+class DS:
+    """一份附件。列名 + 数值矩阵 + 每列能不能当数值用。
+
+    第 83 轮重写了读取逻辑，因为它在真实数据上会**一行都不剩**：
+      · 只认 .xlsx，CSV 直接抛 InvalidFileException
+      · 判定规则是「整行所有列都能转 float 才保留」——
+        真实数据必然有日期列、文本列、稀疏列，于是 5460 行全被丢掉
+
+    现在的规则：
+      · 支持 .csv / .tsv / .txt（自动嗅探编码与分隔符）与 .xlsx
+      · 一列算不算数值列，看**多数**（默认 60%）能不能转，不看是否全都能
+      · 保留行时只看**数值列**是否有值；丢了多少行会记在本对象上，
+        由调用方打印出来 —— 悄悄丢数据是最容易导致错误结论的事
+    """
+
+    NUMERIC_RATIO = 0.6      # 一列里多少比例的**全部行**能转 float 才算数值列
+
+    def __init__(self, path, sheet=None, header_row=None):
+        self.path = path
+        ext = os.path.splitext(str(path))[1].lower()
+        if ext in (".csv", ".tsv", ".txt"):
+            raw = self._read_text(path)
+            self.sheet = "(csv)"
+        else:
+            import openpyxl
+            try:
+                wb = openpyxl.load_workbook(path, data_only=True)
+            except Exception as e:              # noqa: BLE001
+                # 说清是什么坏了、并给出下一步，而不是让 openpyxl 的
+                # BadZipFile 直接冒到命令行（实测：不带 --data 时
+                # find_xlsx 可能返回一个后缀是 .xlsx 但内容不是 zip 的文件）。
+                _n = ""
+                try:
+                    import datapath as _dp
+                    _lp = getattr(_dp, "LAST_PICK", {}) or {}
+                    if _lp.get("path") and os.path.abspath(_lp["path"]) == \
+                            os.path.abspath(str(path)):
+                        _n = ("（这个文件是从工作区里搜出来的，共 %d 个候选；"
+                              "要指定请加 --data）" % int(_lp.get("n_candidates") or 0))
+                except Exception:               # noqa: BLE001
+                    pass
+                raise ValueError(
+                    "读不了数据文件 %r：%s: %s%s。"
+                    "如果它不是真正的 xlsx/csv，请用 --data 指定正确的文件。"
+                    % (str(path), type(e).__name__, e, _n)) from e
+            ws = wb[sheet] if sheet else wb.active
+            self.sheet = ws.title
+            raw = [list(r) for r in ws.iter_rows(values_only=True)]
+
+        hr = header_row if header_row is not None else self._guess_header(raw)
+        self.header_row = hr
+        self.names = [self._clean(c, i) for i, c in enumerate(raw[hr])]
+        body = raw[hr + 1:]
+        ncol = len(self.names)
+
+        # 第一遍：每列有多少个能转 float
+        parseable = [0] * ncol
+        nonblank = [0] * ncol
+        total = 0
+        for row in body:
+            if row is None or all(c is None for c in row):
+                continue
+            total += 1
+            for i in range(ncol):
+                v = row[i] if i < len(row) else None
+                if v is None or (isinstance(v, str) and not v.strip()):
+                    continue
+                nonblank[i] += 1
+                try:
+                    float(v)
+                    parseable[i] += 1
+                except (TypeError, ValueError):
+                    pass
+
+        # 第二遍：按多数判定数值列。
+        # 分母用**全部行**而不是非空行 —— 第一版用非空行做分母，
+        # 于是只有 24% 有值的稀疏列（F/RIDE）也被判成数值列，
+        # 然后它逼着其余 76% 的行全被丢掉（实测只剩 991/5460）。
+        # 稀疏列不该决定整份数据的存亡。
+        numeric = [
+            (total > 0 and parseable[i] / total >= self.NUMERIC_RATIO)
+            for i in range(ncol)
+        ]
+        num_idx = [i for i in range(ncol) if numeric[i]]
+
+        # 第三遍：只按数值列判行
+        cols: list[list[float]] = [[] for _ in num_idx]
+        kept = 0
+        dropped = 0
+        for row in body:
+            if row is None or all(c is None for c in row):
+                continue
+            vals = []
+            ok = True
+            for i in num_idx:
+                v = row[i] if i < len(row) else None
+                try:
+                    vals.append(float(v))
+                except (TypeError, ValueError):
+                    ok = False
+                    break
+            if not ok:
+                dropped += 1
+                continue
+            kept += 1
+            for k, v in enumerate(vals):
+                cols[k].append(v)
+
+        self.numeric = numeric
+        self.num_names = [self.names[i] for i in num_idx]
+        self.M = (np.array(cols, dtype=float).T if kept
+                  else np.zeros((0, len(num_idx))))
+        self.n_rows = kept
+        self.n_rows_raw = kept + dropped
+        self.dropped = dropped
+        self.non_numeric = [self.names[i] for i in range(ncol)
+                            if not numeric[i]]
+
+    @staticmethod
+    def _read_text(path):
+        """读 CSV/TSV。编码与分隔符都自动嗅探，读不出来就如实报。"""
+        import csv
+
+        # 编码：BOM 优先，再依次试 utf-8 / gbk（中文数据常见）
+        text = None
+        for enc in ("utf-8-sig", "utf-8", "gb18030", "latin-1"):
+            try:
+                with open(path, encoding=enc, newline="") as fh:
+                    text = fh.read()
+                break
+            except (UnicodeDecodeError, LookupError):
+                continue
+        if text is None:
+            raise ValueError(f"读不出 {path}：试过 utf-8/gb18030/latin-1")
+
+        head = text[:4000]
+        try:
+            dialect = csv.Sniffer().sniff(head, delimiters=",;\t|")
+            delim = dialect.delimiter
+        except csv.Error:
+            # sniff 失败就数第一行的候选分隔符
+            first = head.splitlines()[0] if head else ""
+            delim = max(",;\t|", key=lambda d: first.count(d))
+        return [r for r in csv.reader(text.splitlines(), delimiter=delim)]
+
+    def drop_note(self) -> str:
+        """丢了多少行、为什么 —— 直接能贴进报告的一句话。"""
+        if not self.dropped:
+            return ""
+        return (f"丢弃 {self.dropped} 行（占 "
+                f"{self.dropped / max(1, self.n_rows_raw):.1%}）："
+                f"这些行在数值列上有缺值，补齐或改用别的列再跑")
+
+    def non_numeric_note(self) -> str:
+        if not self.non_numeric:
+            return ""
+        shown = "、".join(self.non_numeric[:6])
+        more = f" 等 {len(self.non_numeric)} 列" \
+            if len(self.non_numeric) > 6 else ""
+        return f"非数值列（不参与建模）：{shown}{more}"
+
+    @staticmethod
+    def _clean(v, i):
+        s = "" if v is None else str(v).strip()
+        return s if s else f"col{i}"
+
+    @staticmethod
+    def _guess_header(raw) -> int:
+        """表头 = 前 6 行里最像表头的那一行。
+
+        第 83 轮修：原来的打分是 `filled + numish_next*2`，
+        只看"下一行是不是数字"，于是**数据行**经常赢过**表头行** ——
+        实测一份 CSV 的列名被识别成 ['1.0', '1.0']，整张表全错。
+
+        表头的判别特征是"**这一行本身不是数字**，但下一行是"。
+        所以同一行的数字要扣分。
+        """
+        best, best_score = 0, -1e18
+        for i in range(min(6, len(raw) - 1)):
+            cur = raw[i] or []
+            nxt = raw[i + 1] or []
+            filled = sum(1 for c in cur
+                         if c is not None and str(c).strip())
+            if filled < 2:
+                continue
+            self_numish = 0
+            for c in cur:
+                try:
+                    float(c)
+                    self_numish += 1
+                except (TypeError, ValueError):
+                    pass
+            nxt_numish = 0
+            for c in nxt:
+                try:
+                    float(c)
+                    nxt_numish += 1
+                except (TypeError, ValueError):
+                    pass
+            # 下一行是数字 → 加分；这一行自己是数字 → 大幅扣分
+            score = filled + nxt_numish * 2 - self_numish * 3
+            if score > best_score:
+                best, best_score = i, score
+        return best
+
+    def degenerate_cols(self, thresh: float = 0.90) -> list[str]:
+        """几乎不变的列（thresh 以上的行是同一个值）。
+
+        这类列不该当自变量：方差接近 0，回归系数不可辨识，
+        相关系数也无意义（实测 CLR 355 行里 354 个是 5.0）。
+        """
+        out = []
+        for j, nm in enumerate(self.num_names):
+            x = self.col(nm)
+            if len(x) < 5:
+                continue
+            cnts = np.unique(x, return_counts=True)[1]
+            if cnts.max() / float(len(x)) >= thresh:
+                out.append(nm)
+        return out
+
+    def col(self, name_or_idx) -> np.ndarray:
+        if isinstance(name_or_idx, int):
+            return self.M[:, name_or_idx]
+        if name_or_idx not in self.num_names:
+            raise KeyError(f"没有数值列 {name_or_idx!r}；有 {self.num_names}")
+        return self.M[:, self.num_names.index(name_or_idx)]
+
+    def cols(self, names) -> np.ndarray:
+        return np.column_stack([self.col(n) for n in names]) if names else \
+               np.zeros((self.n_rows, 0))
+
+    def pick(self, names) -> list[str]:
+        """按名字模糊匹配列名（含中文子串）。"""
+        out = []
+        for q in names:
+            q = q.strip()
+            if not q:
+                continue
+            if q in self.num_names:
+                out.append(q)
+                continue
+            hits = [n for n in self.num_names if q in n]
+            if not hits:
+                hits = [n for n in self.num_names if q.lower() in n.lower()]
+            if hits:
+                out.append(hits[0])
+            else:
+                raise KeyError(f"匹配不到列 {q!r}；数值列有 {self.num_names}")
+        return out
+
+
+def find_xlsx(base=None) -> str:
+    """找数模附件。
+
+    第 80 轮换掉了这里的实现：原来对整个工作区做 `glob("**/*.xlsx")`，
+    而工作区里的 knowledge-base 有 29.8 万个文件 ——
+    实测 `mmkit.py run` 要 21.4 秒，其中 10.5 秒全在走目录。
+    现在统一走 datapath（剪枝 + 缓存）。
+    """
+    return datapath.find_xlsx(base)
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  eda —— 体检
+# ══════════════════════════════════════════════════════════════════════
+def vif(X: np.ndarray) -> np.ndarray:
+    """方差膨胀因子。>10 说明该列能被别的列线性表示。"""
+    p = X.shape[1]
+    out = np.zeros(p)
+    for j in range(p):
+        others = np.delete(X, j, axis=1)
+        A = np.hstack([np.ones((len(X), 1)), others])
+        y = X[:, j]
+        coef, *_ = np.linalg.lstsq(A, y, rcond=None)
+        resid = y - A @ coef
+        ss_res = float(np.sum(resid ** 2))
+        ss_tot = float(np.sum((y - y.mean()) ** 2))
+        r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
+        out[j] = np.inf if r2 >= 1 else 1.0 / max(1e-12, 1 - r2)
+    return out
+
+
+def eda(ds: DS) -> dict:
+    M, names = ds.M, ds.num_names
+    res = {"rows": ds.n_rows, "cols": len(names), "per_col": [], "corr": None,
+           "vif": [], "outliers": []}
+
+    for j, nm in enumerate(names):
+        x = M[:, j]
+        q1, q3 = np.percentile(x, [25, 75])
+        iqr = q3 - q1
+        n_uniq = int(len(np.unique(x)))
+        lo, hi = q1 - 1.5 * iqr, q1 * 0 + q3 + 1.5 * iqr
+        # IQR 在离散/低基数列上会失效：iqr=0 时"任何不等于中位数"都被判异常。
+        # 第 83 轮在真实数据上踩到：
+        #   YEAR 只有 2025/2026 两个值 → 报 723 个异常
+        #   R/W PH 只有 3 个取值        → 报 189 个异常
+        # 这类列该做的是取值计数，不是异常检测。
+        if iqr <= 0 or n_uniq < 20:
+            n_out = 0
+            out_note = ("低基数（%d 个取值），不做 IQR 异常判定" % n_uniq
+                        if iqr <= 0 else "低基数，不做 IQR 异常判定")
+        else:
+            n_out = int(np.sum((x < lo) | (x > hi)))
+            out_note = ""
+        sd = float(x.std(ddof=1)) if len(x) > 1 else 0.0
+        skew = float(np.mean(((x - x.mean()) / sd) ** 3)) if sd > 0 else 0.0
+        kurt = float(np.mean(((x - x.mean()) / sd) ** 4) - 3) if sd > 0 else 0.0
+        res["per_col"].append(dict(
+            name=nm, n=len(x), miss=ds.n_rows - len(x),
+            min=float(x.min()), max=float(x.max()),
+            mean=float(x.mean()), std=sd,
+            n_unique=n_uniq, skew=skew, kurt=kurt,
+            n_outlier=n_out, out_note=out_note,
+            near_normal=(abs(skew) < 0.5 and abs(kurt) < 1.0),
+        ))
+        if n_out:
+            res["outliers"].append((nm, n_out))
+
+    if len(names) > 1:
+        res["corr"] = np.corrcoef(M.T)
+        res["vif"] = list(zip(names, vif(M).tolist()))
+
+    # ID 列识别：取值数 == 行数，且单调递增。这类列进 VIF 只会污染结论。
+    id_cols = []
+    for j, nm in enumerate(names):
+        x = M[:, j]
+        if len(np.unique(x)) == len(x) and np.all(np.diff(x) > 0):
+            id_cols.append(nm)
+    res["id_cols"] = id_cols
+    return res
+
+
+def print_eda(ds: DS, r: dict) -> None:
+    print("=" * 84)
+    print(f"体检 · {os.path.basename(ds.path)}  [{ds.sheet}]")
+    print("=" * 84)
+    print(f"  表头在第 {ds.header_row + 1} 行；有效行 {r['rows']}；数值列 {r['cols']}")
+    print()
+    print(f"  {'列名':<24}{'min':>10}{'max':>10}{'mean':>11}{'std':>10}"
+          f"{'取值数':>7}{'异常值':>7}  分布")
+    for c in r["per_col"]:
+        nm = c["name"][:22]
+        dist = "近正态" if c["near_normal"] else (
+            "偏斜" if abs(c["skew"]) >= 0.5 else "尖/平")
+        print(f"  {nm:<24}{c['min']:>10.4f}{c['max']:>10.4f}"
+              f"{c['mean']:>11.4f}{c['std']:>10.4f}"
+              f"{c['n_unique']:>7}{c['n_outlier']:>7}  {dist}")
+
+    if r["corr"] is not None:
+        print()
+        print("  相关矩阵")
+        n = len(ds.num_names)
+        short = [x[:8] for x in ds.num_names]
+        print("  " + " " * 20 + "".join(f"{s:>10}" for s in short))
+        for i, s in enumerate(short):
+            print(f"  {ds.num_names[i][:18]:<20}" +
+                  "".join(f"{r['corr'][i, j]:>10.3f}" for j in range(n)))
+
+        print()
+        print("  共线性（VIF，>10 说明这列能被别的列线性表示）")
+        for nm, v in r["vif"]:
+            if r.get("id_cols") and nm in r["id_cols"]:
+                print(f"    {nm[:30]:<32}{'—':>10}  ← ID 列，不进模型")
+                continue
+            flag = "  ← 冗余" if v > 10 else ""
+            print(f"    {nm[:30]:<32}{v:>10.2f}{flag}")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  fit —— 结构选择
+# ══════════════════════════════════════════════════════════════════════
+def design(X: np.ndarray, kind: str):
+    n, p = X.shape
+    ones = np.ones((n, 1))
+    if kind == "linear":
+        return np.hstack([ones, X])
+    if kind == "quad":
+        cols = [ones, X]
+        cols += [(X[:, i] ** 2).reshape(-1, 1) for i in range(p)]
+        cols += [(X[:, i] * X[:, j]).reshape(-1, 1)
+                 for i in range(p) for j in range(i + 1, p)]
+        return np.hstack(cols)
+    if kind in ("log", "power"):
+        if (X <= 0).any():
+            return None
+        return np.hstack([ones, np.log(X)])
+    raise ValueError(kind)
+
+
+def kfold(X, y, kind, k=5, seed=0, ridge=0.0):
+    idx = np.arange(len(y))
+    np.random.default_rng(seed).shuffle(idx)
+    errs = []
+    for f in np.array_split(idx, k):
+        tr = np.setdiff1d(idx, f)
+        A, B = design(X[tr], kind), design(X[f], kind)
+        if A is None or B is None:
+            return None
+        AtA = A.T @ A
+        if ridge > 0:
+            AtA = AtA + ridge * np.eye(AtA.shape[0])
+        try:
+            coef = np.linalg.solve(AtA, A.T @ y[tr])
+        except np.linalg.LinAlgError:
+            coef, *_ = np.linalg.lstsq(A, y[tr], rcond=None)
+        errs.append(float(np.sqrt(np.mean((B @ coef - y[f]) ** 2))))
+    return np.array(errs)
+
+
+CANDS = [("线性", "linear", 0.0), ("二次", "quad", 0.0),
+         ("对数", "log", 0.0), ("幂律", "power", 0.0),
+         ("岭回归(λ=1)", "quad", 1.0), ("岭回归(λ=10)", "quad", 10.0)]
+MIN_GAIN = 0.05
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  泄漏判定：单一定义处（gate.py 委托这里，不再各写一份）
+# ══════════════════════════════════════════════════════════════════════
+# 名字像时间 / 序号列？保守识别，认不出就当「不是」，宁可多报一条假警。
+# 不能拿「年」「月」「日」做裸字包含 —— 「年龄」含「年」但不是时间轴，
+# 实测把 age 判成时间列后，一条真的「年龄→目标」高相关被静默放过。
+_TIME_COMPOUND = ("年份", "月份", "日期", "年度", "季度", "周次", "期数",
+                  "时间", "编号", "序号")
+_TIME_EN = ("year", "month", "date", "time", "period", "index", "week",
+            "quarter")
+
+LEAK_THRESHOLD = 0.95
+
+
+def is_time_like(name) -> bool:
+    """是不是时间轴 / 序号轴。"""
+    if not name:
+        return False
+    s = str(name).strip().lower()
+    if re.fullmatch(r"(19|20)\d{2}", s):
+        return True
+    if re.fullmatch(r"(19|20)\d{2}\s*[-\u2013\u2014~]\s*(19|20)\d{2}", s):
+        return True
+    if any(w in s for w in _TIME_COMPOUND):
+        return True
+    return any(re.search(r"\b%s\b" % w, s) for w in _TIME_EN)
+
+
+def is_lag_pair(a, b) -> bool:
+    """两列是不是同一序列的不同期（滞后自变量）。
+
+    pop2000 → pop2005 用上一期同口径值预测下一期，是人口/存量类问题的标准做法，
+    不是泄漏；而 total_votes → helpful_votes 虽然也高度相关，却是包含关系。
+    判据：去掉结尾数字后主干相同、数字部分不同。
+    """
+    def stem(s):
+        t = str(s or "").strip().lower()
+        m = re.match(r"^(.*?)[\s_\-]*(\d+)$", t)
+        if not m:
+            return t, None
+        return re.sub(r"[\s_\-]+$", "", m.group(1)), m.group(2)
+
+    sa, na = stem(a)
+    sb, nb = stem(b)
+    if not sa or sa != sb or len(sa) < 2:
+        return False
+    return na is not None and nb is not None and na != nb
+
+
+def suspect_leak(ds, yname, xnames=None, thr: float = LEAK_THRESHOLD):
+    """检查 x 里有没有「响应的另一份 / 组成部分」。
+
+    返回 [(列名, 相关系数, 类别)]，类别：
+      "time" —— 时间/序号列与趋势共变（正当建模，不是泄漏）
+      "lag"  —— 同一序列的滞后项（持续性模型，不是泄漏）
+      "leak" —— 其余高度相关（拿响应或其组成部分冒充自变量）
+
+    逐个检查**所有**超阈值的列，不只最相关那一个：只看最大值时，
+    一个正当的滞后项（相关 1.000）会把后面真正的泄漏掩盖掉。
+    """
+    yv = np.asarray(ds.col(yname), dtype=float)
+    if xnames is None:
+        xnames = [c for c in ds.num_names
+                  if c != yname and "编号" not in c]
+    out = []
+    for c in xnames:
+        if c == yname or c not in ds.num_names:
+            continue
+        xv = np.asarray(ds.col(c), dtype=float)
+        if xv.std() == 0 or yv.std() == 0:
+            continue
+        try:
+            cc = float(np.corrcoef(xv, yv)[0, 1])
+        except Exception:                           # noqa: BLE001
+            continue
+        if not (cc == cc) or abs(cc) <= thr:        # NaN 或未超阈值
+            continue
+        if is_time_like(c) or is_time_like(yname):
+            kind = "time"
+        elif is_lag_pair(c, yname):
+            kind = "lag"
+        else:
+            kind = "leak"
+        out.append((c, cc, kind))
+    out.sort(key=lambda t: -abs(t[1]))
+    return out
+
+
+def applicability(ds, xs, ycol):
+    """每个因子的观测区间，以及线性外推在何处失效（第 96 轮）。
+
+    为什么需要：线性模型在样本区间外必然线性外推。实测 23 道题里有 7 道，
+    把因子推进一点点（服务台数 1.94、年龄 0.4、年份 2005.8）就会预言
+    负的计数或负的比例 —— 而论文里没有一句话交代「这套模型只在这个区间内有效」。
+
+    这一份数据同时服务两件事：
+      ① paper.py 用它写出「适用区间」声明（数字来自数据，不是手写）；
+      ② gate.chk_extrap 用它判断论文有没有把区间说对。
+
+    判据与 falsify.limit_behavior 的 y_sign / x_sign 分支一致：
+    只在因变量同号、且因子仍落在同号半轴内时，才谈「穿过零点是荒谬的」。
+    """
+    out = []
+    try:
+        yv = np.asarray(ds.col(ycol), dtype=float)
+        ok_y = ~np.isnan(yv)
+        if not ok_y.any():
+            return []
+        ysign = (1 if (yv[ok_y] > 0).all()
+                 else (-1 if (yv[ok_y] < 0).all() else 0))
+        for c in (xs or []):
+            xv = np.asarray(ds.col(c), dtype=float)
+            ok = ok_y & ~np.isnan(xv)
+            if ok.sum() < 5 or np.std(xv[ok]) == 0:
+                continue
+            lo, hi = float(np.min(xv[ok])), float(np.max(xv[ok]))
+            coef, intercept = np.polyfit(xv[ok], yv[ok], 1)
+            item = dict(x=str(c), lo=round(lo, 6), hi=round(hi, 6),
+                        slope=round(float(coef), 6),
+                        cross_at=None, absurd=False)
+            if ysign and abs(coef) > 1e-12:
+                # polyfit 的截距是 x=0 处的值，所以零点直接解 -b/a
+                cross = float(-intercept / coef)
+                if (ysign > 0 and cross > 0) or (ysign < 0 and cross < 0):
+                    # 只在「因子仍可行」的范围内谈论荒谬
+                    step = (hi - lo) / 5.0
+                    outside = (cross > hi and cross <= hi + 3 * step) or \
+                              (cross < lo and cross >= lo - 3 * step)
+                    item["cross_at"] = round(cross, 6)
+                    item["absurd"] = bool(outside)
+            out.append(item)
+    except Exception:                               # noqa: BLE001
+        return []
+    return out
+
+
+def fit(ds: DS, yname: str, xnames: list[str]) -> dict:
+    X, y = ds.cols(xnames), ds.col(yname)
+    rows = []
+    for label, kind, ridge in CANDS:
+        e = kfold(X, y, kind, ridge=ridge)
+        rows.append(dict(label=label, kind=kind, ridge=ridge,
+                         rmse=None if e is None else float(e.mean()),
+                         fold_rmse=None if e is None else e.tolist()))
+    ok = sorted([r for r in rows if r["rmse"] is not None],
+                key=lambda r: r["rmse"])
+    base = next((r for r in rows if r["label"] == "线性"), None)
+    best = ok[0] if ok else None
+    for r in rows:
+        r["gain_vs_linear"] = (None if (r["rmse"] is None or base is None
+                                        or base["rmse"] is None)
+                               else (base["rmse"] - r["rmse"]) / base["rmse"])
+    A = design(X, "linear")
+    cond = None
+    if A is not None:
+        s = np.linalg.svd(A, compute_uv=False)
+        cond = float(s[0] / s[-1]) if s[-1] > 0 else float("inf")
+    # 基准模型（intercept-only）：预测值恒为训练折均值，
+    # 其 CV RMSE ≈ 目标列的标准差。它代表「只知道均值」的水平，
+    # 任何真模型都必须打得过它，否则等于没建模。
+    baseline_rmse = float(np.std(y))
+    # 建模入口就算一次泄漏：配置写错时结论跟着结果一起带出，不必等出稿后跑 gate。
+    # 这里**不打印** —— 库函数打印会污染调用方（实测 gate 的数值对拍用合成
+    # x/y，被这条 print 刷了几十条）。要提示请在 CLI 层（mmkit run）做。
+    leak = suspect_leak(ds, yname, xnames)
+    _bad = [t for t in leak if t[2] == "leak"]
+    return dict(y=yname, x=xnames, cands=rows, best=best, linear=base,
+                cond_linear=cond, n=len(y),
+                baseline_rmse=baseline_rmse,
+                baseline_kind="intercept-only (mean predictor)",
+                leak_suspects=leak,
+                leak_bad=[c for c, _, _ in _bad])
+
+
+
+
+def _t_quantile(p: float, df: int) -> float:
+    """t 分位数的 Cornish–Fisher 近似（不引入 scipy）。
+
+    p 是双侧置信水平（0.95 → 取 0.975 分位）。
+    """
+    # 先要正态分位数：Acklam 有理近似的简化版
+    a = [0.0, -3.969683028665376e+01, 2.209460984245205e+02,
+         -2.759285104469687e+02, 1.383577518672690e+02,
+         -3.066479806614716e+01, 2.506628277459239e+00]
+    b = [0.0, -5.447609879822406e+01, 1.615858368580409e+02,
+         -1.556989798598866e+02, 6.680131188771972e+01,
+         -1.328068155288572e+01]
+    c = [0.0, -7.784894002430293e-03, -3.223964580411365e-01,
+         -2.400758277161838e+00, -2.549732539343734e+00,
+         4.374664141464968e+00, 2.938163982698783e+00]
+    d = [0.0, 7.784695709041462e-03, 3.224671290700398e-01,
+         2.445134137142996e+00, 3.754408661907416e+00]
+    q = 1.0 - (1.0 - p) / 2.0           # 单侧分位
+    if q < 0.02425:
+        t = np.sqrt(-2 * np.log(q))
+        z = (((((c[1] * t + c[2]) * t + c[3]) * t + c[4]) * t + c[5]) * t
+             + c[6]) / ((((d[1] * t + d[2]) * t + d[3]) * t + d[4]) * t + 1)
+    else:
+        t = q - 0.5
+        r = t * t
+        z = (((((a[1] * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * r
+             + a[6]) * t / (((((b[1] * r + b[2]) * r + b[3]) * r + b[4]) * r
+                             + b[5]) * r + 1)
+    # Cornish–Fisher 修正到 t 分布
+    if df > 0:
+        z = (z + (z ** 3 + z) / (4.0 * df)
+             + (5 * z ** 5 + 16 * z ** 3 + 3 * z) / (96.0 * df ** 2))
+    return float(z)
+
+
+def pred_interval(ds: DS, yname: str, xnames: list[str],
+                  level: float = 0.95) -> dict:
+    """新观测的预测区间：解析式 + 交叉验证式。
+
+    解析式随新点远离样本中心而变宽，所以外推风险直接从宽度看出来；
+    交叉验证式不看模型形式，用折外误差，更保守。
+    """
+    y = np.asarray(ds.col(yname), dtype=float)
+    X = np.column_stack([np.asarray(ds.col(c), dtype=float) for c in xnames])
+    n, p = X.shape
+    A = np.column_stack([np.ones(n), X])
+    beta, *_ = np.linalg.lstsq(A, y, rcond=None)
+    resid = y - A @ beta
+    df = max(1, n - (p + 1))
+    s = float(np.sqrt((resid ** 2).sum() / df))
+    tq = _t_quantile(level, df)
+
+    # 样本中心的杠杆（用于说明「区间在中心最窄」）
+    XtX_inv = np.linalg.pinv(A.T @ A)
+    lev = np.einsum("ij,jk,ik->i", A, XtX_inv, A)
+    half = tq * s * np.sqrt(1.0 + lev)
+
+    # 交叉验证区间
+    from math import sqrt as _sqrt
+    cv_k = max(2, min(5, n // 10)) if n >= 20 else 2
+    errs = []
+    folds = np.array_split(np.arange(n), cv_k)
+    for f in folds:
+        tr = np.setdiff1d(np.arange(n), f)
+        bb, *_ = np.linalg.lstsq(A[tr], y[tr], rcond=None)
+        errs.append(y[f] - A[f] @ bb)
+    cv_rmse = float(np.sqrt(np.concatenate(errs).__pow__(2).mean()))
+    # 每折 RMSE：仿真题要报「重复次数与收敛」，而交叉验证的每一折
+    # 就是一次重复。不记下来的话 paper.py 只能编标准误 —— 那不行。
+    _fold_rmse = [float(np.sqrt((e ** 2).mean())) for e in errs]
+    _fold_cv = float(np.std(_fold_rmse, ddof=1) / max(
+        np.mean(_fold_rmse), 1e-12)) if len(_fold_rmse) > 1 else 0.0
+    cv_half = tq * cv_rmse * _sqrt(1.0 + 1.0 / cv_k)
+
+    return dict(
+        level=level, n=n, df=df, s=s, t=tq,
+        cv_rmse=cv_rmse,
+        half_analytic_mean=float(half.mean()),
+        half_analytic_min=float(half.min()),
+        half_analytic_max=float(half.max()),
+        half_cv=float(cv_half),
+        width_rel=float((2 * half.mean()) / abs(float(y.mean()))),
+        width_rel_cv=float((2 * cv_half) / abs(float(y.mean()))),
+        # 交叉验证的重复信息：折数、每折 RMSE、折间变异系数。
+        # 仿真题要报「重复次数与收敛」，这几项是真算出来的，
+        # 不是编的。
+        cv_folds=int(cv_k),
+        fold_rmse=_fold_rmse,
+        fold_cv=_fold_cv,
+        note=("解析区间假设新点与样本同分布；新点远离中心时 sqrt(1+h) 变大，"
+              "所以外推会立刻表现为区间变宽。交叉验证区间不依赖这个假设。"),
+    )
+
+
+
+def surface(ds: DS, yname: str, xnames: list[str], n: int = 42) -> dict:
+    """代理模型在两个最强因子上的响应面（网格 + 预测值 + 实测点）。"""
+    y = np.asarray(ds.col(yname), dtype=float)
+    X = np.column_stack([np.asarray(ds.col(c), dtype=float)
+                         for c in xnames])
+    r = fit(ds, yname, xnames)
+    kind = (r.get("best") or {}).get("kind") or "linear"
+    A = design(X, kind)
+    if A is None:
+        return None
+    beta, *_ = np.linalg.lstsq(A, y, rcond=None)
+    lin = np.column_stack([np.ones(len(y)), X])
+    lb, *_ = np.linalg.lstsq(lin, y, rcond=None)
+    order = np.argsort(-np.abs(lb[1:]))
+    i, j = int(order[0]), int(order[1])
+    k = (3 - i - j) if len(xnames) == 3 else -1
+    g1 = np.linspace(X[:, i].min(), X[:, i].max(), n)
+    g2 = np.linspace(X[:, j].min(), X[:, j].max(), n)
+    G1, G2 = np.meshgrid(g1, g2)
+    grid = np.zeros((n * n, len(xnames)))
+    grid[:, i] = G1.ravel()
+    grid[:, j] = G2.ravel()
+    fixed_val = None
+    if k >= 0:
+        fixed_val = float(np.median(X[:, k]))
+        grid[:, k] = fixed_val
+    Z = (design(grid, kind) @ beta).reshape(n, n)
+    return dict(x_name=xnames[i], y_name=xnames[j],
+                fixed_name=(xnames[k] if k >= 0 else None),
+                fixed_value=fixed_val, g1=g1, g2=g2, Z=Z, kind=kind,
+                px=X[:, i], py=X[:, j], pz=y)
+
+
+
+
+def diag_report(ds: DS, yname: str, xnames: list[str]) -> dict:
+    """残差诊断：异方差、正态性、是否漏设曲率、是否遗漏因子。
+
+    Breusch–Pagan 用「残差平方对自变量辅助回归的 R² × n」，
+    临界值取卡方(df=k) 的 0.05 分位（k=3 → 7.81）。
+    报统计量与临界值的比较而不是 p 值：一句话的结论不值得为它
+    去实现一个卡方分布函数，而临界值本身是可核对的常数。
+    """
+    y = np.asarray(ds.col(yname), dtype=float)
+    X = np.column_stack([np.asarray(ds.col(c), dtype=float)
+                         for c in xnames])
+    r = fit(ds, yname, xnames)
+    kind = (r.get("best") or {}).get("kind") or "linear"
+    A = design(X, kind)
+    if A is None:
+        return {}
+    beta, *_ = np.linalg.lstsq(A, y, rcond=None)
+    e = y - A @ beta
+    n = len(e)
+    m = float(e.mean())
+    s = float(e.std(ddof=1)) or 1e-12
+    # 异方差：残差平方的辅助回归
+    aux = np.column_stack([np.ones(n), X])
+    ab, *_ = np.linalg.lstsq(aux, e ** 2, rcond=None)
+    er = e ** 2 - aux @ ab
+    bp = float(n * (1.0 - er.var() / (e ** 2).var())) if (e ** 2).var() > 0 else 0.0
+    # 正态性
+    skew = float(((e - m) ** 3).mean() / s ** 3)
+    kurt = float(((e - m) ** 4).mean() / s ** 4)
+    jb = float(n / 6.0 * (skew ** 2 + (kurt - 3.0) ** 2 / 4.0))
+    # 漏设曲率：残差与拟合值的相关
+    c_trend = (float(np.corrcoef(e, A @ beta)[0, 1])
+               if (A @ beta).std() > 0 else 0.0)
+    # 遗漏因子：残差与各自变量的相关
+    c_each = []
+    for i in range(X.shape[1]):
+        v = X[:, i]
+        c_each.append(float(np.corrcoef(e, v)[0, 1]) if v.std() > 0 else 0.0)
+    return dict(y=yname, kind=kind, n=n,
+                rmse=float(np.sqrt((e ** 2).mean())),
+                r2=float(1.0 - e.var() / y.var()) if y.var() > 0 else 0.0,
+                bp=bp, bp_crit=7.81,
+                skew=skew, kurt=kurt, jb=jb,
+                c_trend=c_trend, c_each=c_each, xnames=list(xnames))
+
+
+def front_detail(M, minimize=None) -> dict:
+    """前沿是怎么算出来的：前沿点、被支配的一个具体例子。
+
+    给出例子是为了让读者能核对「非支配」这个判定：光说「12 点」
+    无法核对，光说「第 37 号被第 45 号支配，压降差 0.004」可以。
+    """
+    A = np.asarray(M, dtype=float)
+    if minimize is None:
+        minimize = [True] * A.shape[1]
+    idx = pareto_idx(A, minimize)
+    S = A.copy()
+    for j, mn in enumerate(minimize):
+        if not mn:
+            S[:, j] = -S[:, j]
+    example = None
+    for i in range(len(A)):
+        if i in idx:
+            continue
+        dom = [k for k in idx
+               if np.all(S[k] <= S[i] + 1e-12) and np.any(S[k] < S[i] - 1e-12)]
+        if dom:
+            k = dom[0]
+            example = dict(i=i, dominated_by=k,
+                           worse=[float(A[i, j] - A[k, j])
+                                  for j in range(A.shape[1])],
+                           coords_i=[float(v) for v in A[i]],
+                           coords_k=[float(v) for v in A[k]])
+            break
+    return dict(front=[int(x) for x in idx], n_front=len(idx),
+                n_total=len(A),
+                coords=[[float(v) for v in A[i]] for i in idx],
+                example=example)
+
+
+def print_fit(r: dict) -> None:
+    print("=" * 84)
+    print(f"建模 · 目标「{r['y']}」 ← 自变量 {r['x']}")
+    print("=" * 84)
+    print(f"  {'候选结构':<16}{'CV RMSE':>12}{'相对线性':>10}   逐折")
+    for c in r["cands"]:
+        if c["rmse"] is None:
+            print(f"  {c['label']:<16}{'不适用':>12}{'':>10}"
+                  f"   自变量含 0，取不了对数")
+            continue
+        g = "—" if c["gain_vs_linear"] is None else f"{c['gain_vs_linear']:+.1%}"
+        folds = "[" + ", ".join(f"{v:.4f}" for v in c["fold_rmse"]) + "]"
+        print(f"  {c['label']:<16}{c['rmse']:>12.5f}{g:>10}   {folds}")
+    print()
+    if r["best"]:
+        b = r["best"]
+        print(f"  最优：{b['label']}  CV={b['rmse']:.5f}"
+              f"（{b['gain_vs_linear']:+.1%} vs 线性）")
+    print(f"  线性结构条件数 {r['cond_linear']:.2f}"
+          f"{'  ← 参数辨识良好' if r['cond_linear'] < 1e4 else '  ← 注意共线'}")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  opt —— 多目标
+# ══════════════════════════════════════════════════════════════════════
+def knee_point(M, front_idx, minimize=None):
+    """Pareto 前沿上的膝点：离首末连线最远的那个点。
+
+    返回 dict(idx, name?, coords, gains)
+        idx     原数据行号
+        coords  两个目标的原始值
+        gains   相对两个极端端点各改善了多少（比例）
+
+    为什么要归一化：两个目标量纲不同（热阻 0.72~0.77、压降 0.077~0.21），
+    直接算欧氏距离会被量纲大的那个支配，膝点就找错了。
+    """
+    import numpy as np
+
+    idx = list(front_idx)
+    if len(idx) < 3:
+        return None
+    A = np.asarray(M, dtype=float)[idx]
+    if A.shape[1] < 2:
+        return None
+
+    # 只前两列算膝点（多于两个目标时，膝点本身就没有唯一定义）
+    P2 = A[:, :2]
+    lo = P2.min(axis=0)
+    hi = P2.max(axis=0)
+    span = np.where(hi - lo > 0, hi - lo, 1.0)
+    Z = (P2 - lo) / span
+
+    # 按第一目标排序，弦 = 首末两点
+    order = np.argsort(Z[:, 0])
+    Zs = Z[order]
+    p0, p1 = Zs[0], Zs[-1]
+    d = p1 - p0
+    nd = float(np.hypot(*d))
+    if nd == 0:
+        return None
+
+    # 点到弦的距离
+    rel = Zs - p0
+    dist = np.abs(rel[:, 0] * d[1] - rel[:, 1] * d[0]) / nd
+    k = int(np.argmax(dist))
+    pick = int(order[k])
+
+    c = P2[pick]
+    # 相对两个端点各改善多少
+    g = []
+    for j in range(2):
+        denom = abs(p1[j] - p0[j])
+        g.append(float((p0[j] - c[j]) / denom) if denom > 0 else 0.0)
+
+    return dict(idx=int(idx[pick]), coords=[float(c[0]), float(c[1])],
+                distance=float(dist[k]), gains=g,
+                n_front=len(idx))
+
+
+def pareto_idx(M: np.ndarray, minimize: list[bool]) -> list[int]:
+    """返回非支配集的行号。minimize[j]=True 表示第 j 列越小越好。"""
+    S = M.copy()
+    for j, mn in enumerate(minimize):
+        if not mn:
+            S[:, j] = -S[:, j]
+    keep = []
+    n = len(S)
+    for i in range(n):
+        dominated = False
+        for k in range(n):
+            if k == i:
+                continue
+            if np.all(S[k] <= S[i] + 1e-12) and np.any(S[k] < S[i] - 1e-12):
+                dominated = True
+                break
+        if not dominated:
+            keep.append(i)
+    return keep
+
+
+def opt(ds: DS, cols: list[str], minimize: list[bool], step=0.05) -> dict:
+    M = ds.cols(cols)
+    idx = pareto_idx(M, minimize)
+    lo, hi = M.min(0), M.max(0)
+    Z = (M - lo) / (hi - lo + 1e-12)
+    picks = []
+    grid = np.arange(0, 1 + 1e-9, step)
+    k = len(cols)
+    if k == 2:
+        for a in grid:
+            picks.append((round(a, 2), round(1 - a, 2),
+                          int(np.argmin(Z @ np.array([a, 1 - a])))))
+    elif k == 3:
+        for a in grid:
+            for b in grid:
+                c = 1 - a - b
+                if c < -1e-9:
+                    continue
+                w = np.array([a, b, max(c, 0.0)])
+                picks.append((round(a, 2), round(b, 2), round(w[2], 2),
+                              int(np.argmin(Z @ w))))
+    else:
+        rng = np.random.default_rng(0)
+        for _ in range(2000):
+            w = rng.dirichlet(np.ones(k))
+            picks.append(tuple(np.round(w, 2)) + (int(np.argmin(Z @ w)),))
+    uniq = {}
+    for p in picks:
+        uniq.setdefault(p[-1], []).append(p[:-1])
+    return dict(cols=cols, minimize=minimize, front=idx, M=M,
+                uniq=uniq, n_picks=len(picks))
+
+
+def print_opt(ds: DS, r: dict) -> None:
+    M, cols = r["M"], r["cols"]
+    print("=" * 84)
+    print(f"优化 · {len(cols)} 目标（{'/'.join(cols)}）")
+    print("=" * 84)
+    print(f"  帕累托前沿：{len(r['front'])} / {len(M)} 个点")
+    dirs = ["越小越好" if m else "越大越好" for m in r["minimize"]]
+    print(f"  方向：{dict(zip(cols, dirs))}")
+    print()
+    head = f"  {'行号':<7}" + "".join(f"{c[:8]:>11}" for c in cols)
+    print(head)
+    for i in sorted(r["front"], key=lambda i: M[i, 0])[:15]:
+        print(f"  #{i + 1:<6}" + "".join(f"{M[i, j]:>11.4f}"
+                                        for j in range(len(cols))))
+    print()
+    print(f"  权重扫描：{r['n_picks']} 组权重 → {len(r['uniq'])} 个不同最优解")
+    top = sorted(r["uniq"].items(), key=lambda kv: -len(kv[1]))
+    for i, ws in top[:5]:
+        share = len(ws) / r["n_picks"]
+        w0 = ws[0]
+        print(f"    行 #{i + 1:<5} 占 {share:>5.0%} 权重空间"
+              f"   例 w=({', '.join(f'{v:.2f}' for v in w0)})")
+    if top:
+        ws = top[0][1]
+        w1s = [w[0] for w in ws]
+        print(f"    最稳解对应的 w₁ ∈ [{min(w1s):.2f}, {max(w1s) + 0.05:.2f}]")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  AHP —— 层次分析法求权重（第 81 轮补）
+# ══════════════════════════════════════════════════════════════════════
+# 随机一致性指标 RI（Saaty）。n 最大到 10，再大就得自己补。
+AHP_RI = {1: 0.0, 2: 0.0, 3: 0.58, 4: 0.90, 5: 1.12, 6: 1.24,
+          7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49}
+
+
+def ahp(A, names=None) -> dict:
+    """层次分析法：由两两比较矩阵求权重，并做一致性检验。
+
+    为什么要有这个（而熵权不够）：
+        熵权法只看数据本身的离散度，**跟决策者的偏好无关**。
+        数模评价题里"哪个指标更重要"往往不是数据能回答的
+        （比如"安全性 vs 成本"），这时必须用 AHP 把判断显式写出来，
+        再用一致性检验证明这套判断不自相矛盾。
+
+    做法：几何平均法（比幂法稳，也比特征向量好解释）
+        w_i = (∏_j a_ij)^(1/n) / Σ_k (∏_j a_kj)^(1/n)
+        λmax = mean_i [ (A·w)_i / w_i ]
+        CI = (λmax - n) / (n - 1)
+        CR = CI / RI(n)      ← **CR ≥ 0.1 就必须重填矩阵**
+
+    参数
+        A: n×n 正互反矩阵（a_ij = 1/a_ji，对角线为 1）
+        names: 指标名，用于报告
+
+    返回 dict，含 weights / lambda_max / CI / CR / consistent / warn
+    """
+    M = np.asarray(A, dtype=float)
+    if M.ndim != 2 or M.shape[0] != M.shape[1]:
+        raise ValueError(f"矩阵必须是方阵，收到 {M.shape}")
+    n = M.shape[0]
+    if n < 1:
+        raise ValueError("矩阵为空")
+    if np.any(M <= 0):
+        raise ValueError("AHP 矩阵的元素必须全为正数")
+    # 正互反性检查：a_ij * a_ji 应当 ≈ 1
+    bad = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            if abs(M[i, j] * M[j, i] - 1.0) > 1e-6:
+                bad.append((i + 1, j + 1, M[i, j], M[j, i]))
+
+    # 几何平均法
+    gm = np.exp(np.log(M).mean(1))
+    w = gm / gm.sum()
+
+    if n == 1:
+        lam = 1.0
+    else:
+        Aw = M @ w
+        lam = float(np.mean(Aw / w))
+    ci = (lam - n) / (n - 1) if n > 1 else 0.0
+    ri = AHP_RI.get(n)
+    if ri is None:
+        cr = float("nan")
+    elif ri == 0:
+        cr = 0.0
+    else:
+        cr = ci / ri
+
+    warn = []
+    if bad:
+        warn.append(f"{len(bad)} 对元素不满足正互反（a_ij·a_ji≠1）："
+                    + "；".join(f"a{b[0]}{b[1]}={b[2]:g} 但 a{b[1]}{b[0]}={b[3]:g}"
+                                for b in bad[:3]))
+    if ri is None:
+        warn.append(f"n={n} 超出 RI 表（最大 10），无法判断一致性")
+    elif cr >= 0.1:
+        warn.append(f"CR={cr:.4f} ≥ 0.1 —— **这套判断自相矛盾，必须重填矩阵**，"
+                    f"不能拿这个权重往下算")
+    elif cr >= 0.08:
+        warn.append(f"CR={cr:.4f} 接近 0.1，勉强可用但建议检查判断是否过强")
+
+    consistent = (ri is not None and ri > 0 and cr < 0.1)
+    return dict(n=n, weights=w, lambda_max=lam, CI=ci, CR=cr, RI=ri,
+                consistent=consistent,
+                names=names or [f"指标{i + 1}" for i in range(n)],
+                warn=warn)
+
+
+def print_ahp(r: dict) -> None:
+    print()
+    print("=" * 84)
+    print(f"层次分析法 AHP（{r['n']} 个指标）")
+    print("=" * 84)
+    print(f"  {'指标':<22}{'权重':>10}")
+    for nm, w in zip(r["names"], r["weights"]):
+        bar = "█" * int(round(w * 40))
+        print(f"  {nm:<22}{w:>10.4f}  {bar}")
+    print()
+    print(f"  λmax = {r['lambda_max']:.4f}   CI = {r['CI']:.4f}   "
+          f"RI = {r['RI'] if r['RI'] is not None else '—'}   "
+          f"CR = {r['CR']:.4f}")
+    if r["consistent"]:
+        print(f"  ✓ CR < 0.1，判断矩阵通过一致性检验")
+    elif r["RI"] is not None and r["RI"] > 0:
+        print(f"  ✗ CR ≥ 0.1，**这套两两比较自相矛盾**")
+        print(f"    常见原因：A 比 B 重要、B 比 C 重要，却写成 C 比 A 重要。")
+        print(f"    必须重填矩阵 —— 拿矛盾的权重算出来的排序是废的。")
+    if r["warn"]:
+        print()
+        for w in r["warn"]:
+            print(f"  ⚠ {w}")
+    print()
+    print("  边界：AHP 的权重是**决策者的判断**，不是数据的性质。")
+    print("        同一份数据换个人填矩阵，权重就会变 —— 论文里要交代是谁填的。")
+
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  灰色关联度分析（第 83 轮补）
+# ══════════════════════════════════════════════════════════════════════
+def _normalize(M: np.ndarray, how: str) -> np.ndarray:
+    """序列归一化。三种都是数模里常见的写法。"""
+    M = np.asarray(M, dtype=float)
+    if how == "init":                      # 初值化：各列除以本列第一个
+        base = M[0].copy()
+        base[base == 0] = 1e-12
+        return M / base
+    if how == "mean":                      # 均值化：各列除以本列均值
+        mu = M.mean(0)
+        mu[mu == 0] = 1e-12
+        return M / mu
+    if how == "range":                     # 极差化：归到 [0,1]
+        lo, hi = M.min(0), M.max(0)
+        return (M - lo) / (hi - lo + 1e-12)
+    raise ValueError(f"未知的归一化方式 {how!r}（init / mean / range）")
+
+
+def grey_relational(M, directions=None, rho: float = 0.5,
+                    normalize: str = "mean", ref=None) -> dict:
+    """灰色关联度分析：每个方案与"参考序列"的接近程度。
+
+    为什么数模要用它（而熵权/TOPSIS 不够）：
+        TOPSIS 比的是**到理想解的距离**，对量纲和极端值敏感；
+        灰色关联比的是**曲线形状的相似度** —— 即使整体数值差一截，
+        只要变化趋势跟着参考序列走，关联度就高。
+        样本很少（三五个方案）时它比 TOPSIS 稳。
+
+    步骤：
+        1. 归一化（默认均值化）
+        2. 差序列 Δ_i(k) = |x0(k) - x_i(k)|
+        3. 两级最小/最大差 Δmin、Δmax
+        4. 关联系数 ξ_i(k) = (Δmin + ρΔmax) / (Δ_i(k) + ρΔmax)
+        5. 关联度 r_i = mean_k ξ_i(k)        ← 越大越接近参考序列
+
+    ρ=0.5 是默认值（分辨系数）。ρ 越小分辨力越强但越容易被噪声带偏。
+
+    参数
+        M: (n 个方案, m 个指标)
+        directions: 每个指标的方向，+1 越大越好、-1 越小越好；
+                    给了就按它构造"理想参考序列"；默认全 +1
+        ref: 直接指定参考序列（长度 m）。给了就忽略 directions
+    """
+    A = np.asarray(M, dtype=float)
+    if A.ndim != 2:
+        raise ValueError(f"期望二维矩阵，收到 {A.ndim} 维")
+    n, m = A.shape
+    if n < 1 or m < 1:
+        raise ValueError("矩阵不能为空")
+    dirs = np.ones(m) if directions is None else np.asarray(directions, float)
+    if len(dirs) != m:
+        raise ValueError(f"directions 长度 {len(dirs)} ≠ 指标数 {m}")
+
+    # 参考序列：默认取每个指标的最优值（按方向）
+    if ref is None:
+        ideal = np.where(dirs > 0, A.max(0), A.min(0))
+        ref_row = ideal
+        ref_src = "理想解"
+    else:
+        ref_row = np.asarray(ref, dtype=float)
+        if ref_row.shape != (m,):
+            raise ValueError(f"ref 长度应为 {m}")
+        ref_src = "指定序列"
+
+    Z = _normalize(np.vstack([ref_row, A]), normalize)
+    x0 = Z[0]
+    X = Z[1:]
+
+    D = np.abs(X - x0[None, :])            # 差序列
+    dmin = float(D.min())
+    dmax = float(D.max())
+    if dmax < 1e-12:
+        # 所有方案与参考完全一致 —— 关联度全 1，但要说清楚
+        xi = np.ones_like(D)
+        warn = ["所有方案与参考序列完全一致，关联度没有区分力"]
+    else:
+        xi = (dmin + rho * dmax) / (D + rho * dmax)
+        warn = []
+    grades = xi.mean(1)
+    order = np.argsort(-grades)
+    spread = float(grades.max() - grades.min())
+    if not warn and spread < 0.02:
+        warn.append(f"关联度极差只有 {spread:.4f}，各方案几乎一样 —— "
+                    f"这套指标分不出高下")
+
+    return dict(n=n, m=m, grades=grades, order=order, xi=xi,
+                ref=ref_row, ref_src=ref_src, rho=rho,
+                normalize=normalize, dmin=dmin, dmax=dmax,
+                direction=list(dirs), warn=warn)
+
+
+def print_grey_relational(r: dict, names=None) -> None:
+    print()
+    print("=" * 84)
+    print(f"灰色关联度分析（{r['n']} 个方案 × {r['m']} 个指标）")
+    print("=" * 84)
+    print(f"  参考序列：{r['ref_src']}    归一化：{r['normalize']}    ρ={r['rho']}")
+    print(f"  差序列 Δmin={r['dmin']:.6f}  Δmax={r['dmax']:.6f}")
+    print()
+    print(f"  {'排名':>4}{'方案':>10}{'关联度':>12}")
+    for rank, i in enumerate(r["order"], 1):
+        nm = names[i] if names else f"方案{i + 1}"
+        bar = "█" * int(round(r["grades"][i] * 30))
+        print(f"  {rank:>4}{nm:>10}{r['grades'][i]:>12.4f}  {bar}")
+    print()
+    if r["warn"]:
+        for w in r["warn"]:
+            print(f"  ⚠ {w}")
+    else:
+        print(f"  ✓ 第 1 名与末名差 {r['grades'][r['order'][0]] - r['grades'][r['order'][-1]]:.4f}，"
+              f"有区分力")
+    print()
+    print("  边界：关联度是**相对排序**，不是绝对好坏。")
+    print("        它只回答「谁更像参考序列」，不回答「够不够好」——")
+    print("        论文里要交代参考序列是怎么定的（理想解还是某个基准）。")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  模糊综合评价（第 83 轮补）
+# ══════════════════════════════════════════════════════════════════════
+def fuzzy_eval(W, R, operator: str = "weighted",
+               grades=None) -> dict:
+    """模糊综合评价。
+
+    为什么需要它：
+        有些指标天生是定性的（"服务态度好/一般/差"），
+        你没法给它一个数，只能给"它属于哪个等级"的**隶属度**。
+        这时熵权、TOPSIS 都用不上 —— 它们的输入必须是数。
+
+    模型：B = W ∘ R
+        W: 权重向量 (m,)        ← 通常来自 AHP 或熵权
+        R: 隶属度矩阵 (m × g)   ← R[i][j] = 第 i 个指标属于第 j 等级的程度
+        ∘: 合成算子
+
+    两种算子，结果不一样，选哪种要交代：
+        weighted（加权平均，M(·,+)）：B_j = Σ_i W_i·R_ij
+            保留全部信息，最常用。**推荐默认**。
+        maxmin（主因素决定，M(∧,∨)）：B_j = max_i min(W_i, R_ij)
+            只看最强的那个指标，"一票定音"。指标里有硬性门槛时才用。
+
+    参数
+        grades: 等级分值，例如 [95, 85, 75, 65]，用于把 B 折成一个总分
+    """
+    Wv = np.asarray(W, dtype=float).ravel()
+    Rm = np.asarray(R, dtype=float)
+    if Rm.ndim != 2:
+        raise ValueError(f"R 必须是二维（指标 × 等级），收到 {Rm.ndim} 维")
+    m, g = Rm.shape
+    if len(Wv) != m:
+        raise ValueError(f"权重长度 {len(Wv)} ≠ 指标数 {m}")
+    if np.any(Wv < 0):
+        raise ValueError("权重不能为负")
+    if np.any(Rm < 0) or np.any(Rm > 1):
+        raise ValueError("隶属度必须在 [0,1]")
+
+    if operator == "weighted":
+        B = Wv @ Rm
+    elif operator == "maxmin":
+        B = np.array([np.max(np.minimum(Wv, Rm[:, j])) for j in range(g)])
+    else:
+        raise ValueError(f"未知算子 {operator!r}（weighted / maxmin）")
+
+    total = float(B.sum())
+    warn = []
+    if total <= 1e-12:
+        Bn = np.zeros(g)
+        warn.append("合成结果全为 0，权重或隶属度可能填错了")
+    else:
+        Bn = B / total
+    peak = int(np.argmax(Bn)) if g else 0
+
+    score = None
+    if grades is not None:
+        gv = np.asarray(grades, dtype=float).ravel()
+        if len(gv) != g:
+            raise ValueError(f"grades 长度 {len(gv)} ≠ 等级数 {g}")
+        score = float(Bn @ gv)
+
+    if not warn and total > 0 and float(Bn.max()) < 0.4:
+        warn.append(f"最大隶属度只有 {Bn.max():.3f} < 0.4 —— "
+                    f"结论不明确，几个等级分不开")
+    if operator == "maxmin":
+        warn.append("用了主因素决定算子：结果会被最强的那个指标主导，"
+                    "其余指标的信息丢了")
+
+    return dict(m=m, g=g, B=B, Bn=Bn, score=score, peak=peak,
+                operator=operator,
+                # 转成原生 float：numpy 的 float64 在 f-string 里会打成
+                # "np.float64(95.0)"，直接漏进给用户看的报告里
+                grades=(None if grades is None
+                        else [float(v)
+                              for v in np.asarray(grades, float)]),
+                W=Wv, warn=warn)
+
+
+def print_fuzzy(r: dict, factor_names=None, grade_names=None) -> None:
+    print()
+    print("=" * 84)
+    print(f"模糊综合评价（{r['m']} 个指标 × {r['g']} 个等级，算子 {r['operator']}）")
+    print("=" * 84)
+    print(f"  {'等级':<14}{'合成值':>12}{'归一化':>12}")
+    for j in range(r["g"]):
+        nm = (grade_names[j] if grade_names
+              else f"等级{j + 1}")
+        mark = "  ← 最大隶属" if j == r["peak"] else ""
+        print(f"  {nm:<14}{r['B'][j]:>12.6f}{r['Bn'][j]:>12.6f}{mark}")
+    print()
+    peak_name = (grade_names[r["peak"]] if grade_names
+                 else f"等级{r['peak'] + 1}")
+    print(f"  判定结果：**{peak_name}**（最大隶属度 {r['Bn'][r['peak']]:.4f}）")
+    if r["score"] is not None:
+        print(f"  综合得分：{r['score']:.4f}（按等级分值 "
+              f"{r['grades']} 加权）")
+    print()
+    if r["warn"]:
+        for w in r["warn"]:
+            print(f"  ⚠ {w}")
+    else:
+        print("  ✓ 最大隶属度 ≥ 0.4，结论明确")
+    print()
+    print("  边界：模糊评价的结论强不强，取决于**隶属度矩阵怎么来的**。")
+    print("        隶属度通常是专家打分或隶属函数算的 —— 论文里必须写清楚来源，")
+    print("        否则读者无法判断这个「优」是真评出来的还是填出来的。")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  时间列 / 日期列识别（第 88 轮补）
+# ══════════════════════════════════════════════════════════════════════
+_MEASURE_TIME_WORDS = ("等待时间", "服务时间", "响应时间", "处理时间",
+                       "停留时间", "耗时", "时长", "周期", "间隔",
+                       "妊娠时间", "孕周", "周数",
+                       "waiting time", "service time", "response time")
+_TIME_NAME_HINTS = ("time", "hour", "时刻", "时间", "时点", "钟点")
+_DATE_NAME_HINTS = ("date", "day", "日期", "年月日", "date_time")
+
+
+def _looks_like_axis(x, n: int) -> bool:
+    """取值是否像「每行一个时刻」的索引。
+
+    这是「真时间轴」与另外两类的分界（第 109 轮）：
+      · 测量时长（等待时间=分钟、停留时间=秒）→ 值是量级，不是索引；
+      · 年份分箱列（列名 "1950"、列里装的是人口）→ 列名是期号，值是量级；
+      · 真时间轴（列名 年份、一行一年）→ 值等距递增且几乎不重复。
+    判据只用取值形态，不靠列名猜。
+    """
+    import numpy as _np
+    try:
+        u = _np.unique(x[~_np.isnan(x)])
+    except Exception:                               # noqa: BLE001
+        return False
+    if len(u) < 6:
+        return False
+    # ① Excel 时间序列号：全在 [0,1) 且是 1/24 的整数倍
+    if float(u.min()) >= 0 and float(u.max()) < 1.0:
+        steps = u * 24.0
+        if _np.all(_np.abs(steps - _np.round(steps)) < 1e-6):
+            return True
+    # ② 等距的整数序列（年份/月份/期号），且几乎每行一个不同值
+    if len(u) / float(max(1, n)) >= 0.90:
+        d = _np.diff(u)
+        if d.min() > 0 and _np.all(_np.abs(d - _np.round(d)) < 1e-6):
+            return True
+    # ③ 周期时间轴：不同值不多、**确实在重复**，且整列在循环
+    #    （时刻列 07:00/09:00… 逐日重复）。这一条原来在旧 time_cols 里，
+    #    我第一版统一时漏掉了，结果 A 题的 TIME 列不再被判成时间轴 ——
+    #    `--y TIME` 又能跑通。是 tests/advise_smoke.py 把它抓出来的。
+    #    「确实在重复」这个前提不能省：否则「1950」那种高基数的
+    #    分箱列（列名像年份、列里装人口）也会被当成循环轴。
+    if len(u) <= 48 and len(u) / float(max(1, n)) < 0.90:
+        d = _np.diff(x.astype(float))
+        d = d[~_np.isnan(d)]
+        if len(d) and (_np.any(d > 0) and _np.any(d < 0)):
+            return True
+    return False
+
+
+# 标识列：每行一个编号，不是被解释变量，但也**不是时间轴**。
+# 原来它们被并进「时间轴」，于是提示语会对着「方案编号」说
+# 「这是时间」—— 话是错的话（第 109 轮量出来的）。
+_ID_NAME_WORDS = ("编号", "序号", "id", "index", "no.", "case_no")
+
+
+def is_row_index_name(nm) -> bool:
+    s = str(nm)
+    low = s.lower()
+    return any(w in s or w in low for w in _ID_NAME_WORDS)
+
+
+def is_time_axis_name(nm) -> bool:
+    """列名是否像时间轴（剔除测量时长词与标识词）。
+
+    与 `is_time_like` 的区别：`is_time_like` 只回答「名字像不像时间」，
+    会命中「等待时间」这类测量值和「方案编号」这类标识；这里先剔除。
+    """
+    s = str(nm)
+    low = s.lower()
+    if any(w in s or w in low for w in _MEASURE_TIME_WORDS):
+        return False
+    if is_row_index_name(nm):
+        return False
+    return is_time_like(nm)
+
+
+def row_index_cols(ds) -> list[str]:
+    """标识列：名字像编号，且取值像每行一个的序号。"""
+    out = []
+    for nm in ds.num_names:
+        if not is_row_index_name(nm):
+            continue
+        try:
+            if _looks_like_axis(ds.col(nm), ds.n_rows):
+                out.append(nm)
+        except Exception:                           # noqa: BLE001
+            continue
+    return out
+
+
+def non_response_cols(ds) -> list:
+    """既不能当被解释变量、也不该当因子的列，带类型标签。
+
+    返回 [(列名, "time"|"id")]。调用方据此决定措辞：
+    时间轴说「这是时间」，标识列说「这是编号」—— 两件事，别混着说。
+    """
+    out = [(c, "time") for c in time_axis_cols(ds)]
+    for c in row_index_cols(ds):
+        if all(c != x for x, _k in out):
+            out.append((c, "id"))
+    return out
+
+
+
+def time_axis_cols(ds) -> list[str]:
+    """真正的时间轴列：名字像时间 **且** 取值像索引。
+
+    两套旧判据的分歧（第 106 轮量出来的）：
+      · `is_time_like` 只认名字 → 把「等待时间」「1950」都算时间，过度触发；
+      · 旧的 `time_cols` 只认少数几个词 → 漏掉「年份/月份/年度/季度」。
+    现在统一为「名字像 + 取值像」，两条件都要满足。
+
+    为什么必须单独识别：时间轴一旦被当成普通数值列，`--y <时间轴>` 也能跑通，
+    输出还全是「显著」的偏相关 —— 每一步计算都对，结论整个是错的。
+    """
+    out = []
+    n = ds.n_rows
+    if n < 8:
+        return out
+    for nm in ds.num_names:
+        if not is_time_axis_name(nm):
+            continue
+        try:
+            x = ds.col(nm)
+        except Exception:                           # noqa: BLE001
+            continue
+        if _looks_like_axis(x, n):
+            out.append(nm)
+    return out
+
+
+def time_cols(ds) -> list[str]:
+    """兼容别名：等于 	ime_axis_cols(ds)（第 109 轮统一）。
+
+    旧实现只认 time/hour/时刻/时间/时点/钟点/date/day/日期 这几个词，
+    于是「年份 / 月份 / 年度 / 季度 / 周次 / 期数」这些真时间轴**一个都认不出**；
+    而 is_time_like 又只认名字、不看取值，把「等待时间」「1950」也当时间轴。
+    两套判据都留着，只会让调用方各自踩一半的坑，所以合并成一条：
+    名字像时间（is_time_axis_name）**且** 取值像索引（_looks_like_axis）。
+    """
+    return time_axis_cols(ds)
+
+def time_col_health(ds, name: str) -> dict:
+    """时间列的体检：哪些值是合法的、哪些是脏数据、周期是多少。
+
+    判据不靠猜：一个真正的时间列，每个合法时点出现的次数应当接近
+    n / 时点数；出现次数远低于这个数的值就是脏数据。
+
+    实测 A 题：TIME 有 12 个合法时点（各出现约 215 次），
+    另有 5 行值是 5.87 —— 那显然不是时间。
+    """
+    if name not in ds.num_names:
+        return dict(ok=False, why=f"{name} 不是数值列")
+    x = ds.col(name)
+    n = len(x)
+    vals, cnts = np.unique(x, return_counts=True)
+    if len(vals) < 2:
+        return dict(ok=False, why="时间列只有一个取值")
+    order = np.argsort(-cnts)
+    # 合法时点：出现次数 >= 平均每点次数的 20%
+    expect = n / float(len(vals))
+    good_mask = cnts >= 0.20 * expect
+    good_vals = vals[good_mask]
+    bad_vals = vals[~good_mask]
+    n_bad = int(cnts[~good_mask].sum())
+    period = int(len(good_vals)) if len(good_vals) >= 2 else None
+    reasons = []
+    if n_bad:
+        shown = ", ".join(f"{float(v):g}" for v in bad_vals[:5])
+        reasons.append(
+            f"{n_bad} 行的 {name} 不是合法时点（值 = {shown}）—— "
+            f"这些行的时间信息是错的，按它排序会错位")
+    if period and period not in (2, 3, 4, 6, 8, 12, 24, 48):
+        reasons.append(f"合法时点有 {period} 个，不像常见的一天时点数"
+                       f"（12/24/48）")
+    return dict(ok=not reasons, reasons=reasons,
+                good_values=[float(v) for v in good_vals],
+                bad_values=[float(v) for v in bad_vals],
+                n_bad=n_bad, period=period,
+                modal_counts=[int(cnts[i]) for i in order[:period or 1]])
+
+
+def date_col_health(raw_first_col, filename: str = "") -> dict:
+    """检查一个"日期列"能不能信。
+
+    三种坏法（都在 A 题真实数据上出现过）：
+      · 整列同一天（月份被钉死）
+      · 日期与文件名暗示的月份不符
+      · 全是不带时间的序列号
+
+    返回 ok / reasons，reasons 里写清楚为什么不可信。
+    """
+    import re as _re
+    vals = [str(v) for v in raw_first_col if v is not None and str(v).strip()]
+    reasons = []
+    if not vals:
+        return dict(ok=False, reasons=["日期列全空"])
+    uniq = {v for v in vals}
+    if len(uniq) == 1:
+        reasons.append(f"整列只有同一个日期 {vals[0]} —— 日期列被写死，"
+                       f"不能用来排序")
+    elif len(uniq) < max(2, len(vals) // 60):
+        reasons.append(f"整列只有 {len(uniq)} 个不同日期（{len(vals)} 行）"
+                       f" —— 明显不对")
+    # 与文件名里的月份比对
+    mon_en = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+              "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11,
+              "dec": 12}
+    want = None
+    low = filename.lower()
+    for k, v in mon_en.items():
+        if k in low:
+            want = v
+            break
+    if want:
+        got = None
+        for v in vals[:3]:
+            m = _re.search(r"\d{4}-(\d{2})-(\d{2})", v)
+            if m:
+                got = int(m.group(1))
+                # Apr 文件写成 2025-01-04：月份 01，日号 04 = 真实月份
+                day = int(m.group(2))
+                if got != want and day == want:
+                    reasons.append(
+                        f"日期写成了 {v}（月份字段={got:02d}，"
+                        f"日号={day:02d}），但文件名是 {want} 月 —— "
+                        f"**月份和日号被写反了**，直接解析会让整年错位")
+                    break
+                break
+        if got is not None and got != want and not reasons:
+            reasons.append(f"日期月份 {got} 与文件名的 {want} 月不符")
+    return dict(ok=not reasons, reasons=reasons,
+                n_unique=len(uniq), sample=vals[:2])
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  变换稳健性（第 84 轮补）
+# ══════════════════════════════════════════════════════════════════════
+def ols_summary(X: np.ndarray, y: np.ndarray,
+                names: list[str]) -> dict:
+    """一次 OLS 的完整交代：系数、t 值、R²、BP 异方差统计量。
+
+    为什么要把 R² 露出来：
+        原来只报 CV RMSE。真实数据上出现过 RMSE=0.52、而 y 的标准差
+        是 0.54 —— R² 只有 7.4%，等于几乎没解释力。RMSE 单看没有参照，
+        用户会误以为模型能用。
+    """
+    n, k = X.shape
+    A = np.hstack([np.ones((n, 1)), X])
+    beta = np.linalg.lstsq(A, y, rcond=None)[0]
+    resid = y - A @ beta
+    ss_res = float(np.sum(resid ** 2))
+    ss_tot = float(np.sum((y - y.mean()) ** 2))
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+    dof = max(1, n - k - 1)
+    s2 = ss_res / dof
+    try:
+        cov = s2 * np.linalg.inv(A.T @ A)
+        se = np.sqrt(np.abs(np.diag(cov)))[1:]
+    except np.linalg.LinAlgError:
+        se = np.full(k, np.nan)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        tvals = np.where(se > 0, beta[1:] / se, np.nan)
+
+    # Breusch-Pagan：残差平方对自变量回归，n·R² 近似 χ²(k)
+    e2 = resid ** 2
+    b2 = np.linalg.lstsq(A, e2, rcond=None)[0]
+    e2_hat = A @ b2
+    ss_t2 = float(np.sum((e2 - e2.mean()) ** 2))
+    ss_r2 = float(np.sum((e2 - e2_hat) ** 2))
+    r2_bp = 1.0 - ss_r2 / ss_t2 if ss_t2 > 0 else 0.0
+    bp = n * r2_bp
+
+    return dict(n=n, k=k, beta=beta, resid=resid, r2=r2,
+                rmse=float(np.sqrt(ss_res / n)), t=tvals, se=se,
+                bp=float(bp),
+                # χ²(k) 的 0.05 临界值近似（k 常见取值查表）
+                bp_crit=float({1: 3.84, 2: 5.99, 3: 7.81, 4: 9.49, 5: 11.07,
+                               6: 12.59, 7: 14.07, 8: 15.51, 9: 16.92,
+                               10: 18.31}.get(k, 3.84 + 2.0 * (k - 1))),
+                names=list(names))
+
+
+def robustness(ds, yname: str, xnames: list[str]) -> dict:
+    """同一组变量，把 y 换个尺度，结论还站得住吗？
+
+    为什么必须有这个（而不是"自动取对数"）：
+        BP 检验只能说明"有异方差"，它**不能保证取对数就好**。
+        实测水厂数据：BP 原尺度 109.2，取 log 之后变成 246.4 —— 更糟了。
+        所以不能盲信任何一种变换，只能**对比**：
+        结论对尺度敏感 ⇒ 这条结论不可靠，无论哪个尺度都不能单独写。
+
+    做法：原尺度为基准，再跑 log(y)（要求 y 全正）与 sqrt(y)（要求 y≥0），
+    逐变量比对「符号」和「是否显著」。任一不一致就标记为翻转。
+    """
+    X = ds.cols(xnames)
+    y = ds.col(yname)
+    base = ols_summary(X, y, xnames)
+    variants = [dict(name="原尺度", key="raw", stat=base, y=y)]
+    if np.all(y > 0):
+        variants.append(dict(name="log(y)", key="log",
+                             stat=ols_summary(X, np.log(y), xnames),
+                             y=np.log(y)))
+    if np.all(y >= 0) and np.any(y > 0):
+        variants.append(dict(name="sqrt(y)", key="sqrt",
+                             stat=ols_summary(X, np.sqrt(y), xnames),
+                             y=np.sqrt(y)))
+
+    # 逐变量比对
+    rows = []
+    for i, nm in enumerate(xnames):
+        cells = []
+        for v in variants:
+            st = v["stat"]
+            b = float(st["beta"][i + 1])
+            t = float(st["t"][i]) if np.isfinite(st["t"][i]) else 0.0
+            cells.append(dict(variant=v["name"], sign=(1 if b > 0 else -1),
+                              t=t, significant=abs(t) > 1.96,
+                              coef=b))
+        signs = {c["sign"] for c in cells}
+        sigs = {c["significant"] for c in cells}
+        flips = []
+        if len(signs) > 1:
+            flips.append("符号")
+        if len(sigs) > 1:
+            flips.append("显著性")
+        rows.append(dict(name=nm, idx=i, cells=cells,
+                         flips="+".join(flips) if flips else "",
+                         stable=(not flips)))
+
+    n_stable = sum(1 for r in rows if r["stable"])
+    warn = []
+    if base["r2"] < 0.10:
+        warn.append(f"R²={base['r2']:.1%} < 10% —— 这组自变量几乎解释不了 "
+                    f"{yname}，下面每个系数都不该单独当结论")
+    if base["bp"] > base["bp_crit"]:
+        warn.append(f"BP={base['bp']:.1f} > 临界 {base['bp_crit']:.1f} —— "
+                    f"有异方差，t 值不可信，应改用稳健标准误")
+    flip_names = [r["name"] for r in rows if not r["stable"]]
+    if flip_names:
+        warn.append(f"{len(flip_names)}/{len(rows)} 个变量的结论随 y 尺度改变 "
+                    f"—— {('、'.join(flip_names[:4]))}"
+                    f"{' 等' if len(flip_names) > 4 else ''} 不可靠")
+
+    return dict(y=yname, x=list(xnames), base=base, variants=variants,
+                rows=rows, n_stable=n_stable, n_total=len(rows),
+                all_stable=(n_stable == len(rows)), warn=warn)
+
+
+def print_robustness(r: dict) -> None:
+    base = r["base"]
+    print("=" * 84)
+    print(f"变换稳健性 · {r['y']} 换尺度后结论还站得住吗")
+    print("=" * 84)
+    print(f"  基准 OLS：n={base['n']}  R²={base['r2']:.2%}  "
+          f"RMSE={base['rmse']:.5f}")
+    print(f"  BP 异方差统计量 {base['bp']:.1f}"
+          f"（χ²({base['k']}) 0.05 临界 {base['bp_crit']:.1f}）"
+          f"{'  ← 有异方差' if base['bp'] > base['bp_crit'] else '  ← 同方差'}")
+    print()
+    vs = [v["name"] for v in r["variants"]]
+    head = f"  {'变量':<16}" + "".join(f"{v:>22}" for v in vs) + "   判定"
+    print(head)
+    print("  " + "-" * (len(head) - 2))
+    for row in r["rows"]:
+        line = f"  {row['name']:<16}"
+        for c in row["cells"]:
+            s = "+" if c["sign"] > 0 else "-"
+            g = "显著" if c["significant"] else "不显著"
+            line += f"{s + ' ' + g:>22}"
+        line += f"   {'✓ 稳' if row['stable'] else '✗ ' + row['flips']}"
+        print(line)
+    print()
+    if r["warn"]:
+        print("  ⚠ 警告：")
+        for w in r["warn"]:
+            print(f"      · {w}")
+    else:
+        print(f"  ✓ {r['n_total']} 个变量在 {len(vs)} 种尺度下结论一致")
+    print()
+    print("  为什么不是「自动取对数」：BP 只能说明有异方差，")
+    print("  它**不保证**取对数能修好 —— 实测有数据取对数后 BP 反而翻倍。")
+    print("  所以这里只做对比，不做选择：结论对尺度敏感 = 这条不能单独写。")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  score —— 熵权 + TOPSIS
+# ══════════════════════════════════════════════════════════════════════
+def entropy_weight(M: np.ndarray) -> np.ndarray:
+    """熵权法。M 先极差归一化到 [0,1]，再加小量避免 log0。"""
+    lo, hi = M.min(0), M.max(0)
+    Z = (M - lo) / (hi - lo + 1e-12)
+    P = Z + 1e-9
+    P = P / P.sum(0)
+    n = len(M)
+    e = -(P * np.log(P)).sum(0) / np.log(n)
+    d = 1 - e
+    return d / d.sum()
+
+
+def topsis(M: np.ndarray, w: np.ndarray, benefit: list[bool]) -> np.ndarray:
+    lo, hi = M.min(0), M.max(0)
+    Z = (M - lo) / (hi - lo + 1e-12)
+    for j, b in enumerate(benefit):
+        if not b:
+            Z[:, j] = 1 - Z[:, j]
+    V = Z * w
+    best, worst = V.max(0), V.min(0)
+    dp = np.sqrt(((V - best) ** 2).sum(1))
+    dn = np.sqrt(((V - worst) ** 2).sum(1))
+    return dn / (dp + dn + 1e-12)
+
+
+def score(ds: DS, benefit: list[str], cost: list[str]) -> dict:
+    cols = benefit + cost
+    M = ds.cols(cols)
+    flags = [True] * len(benefit) + [False] * len(cost)
+    w = entropy_weight(M)
+    s = topsis(M, w, flags)
+    order = np.argsort(-s)
+    return dict(cols=cols, benefit_flags=flags, weights=w, score=s, order=order)
+
+
+def print_score(ds: DS, r: dict) -> None:
+    print("=" * 84)
+    print(f"评价 · 熵权 + TOPSIS（{len(r['cols'])} 指标）")
+    print("=" * 84)
+    print("  权重（熵权法自动定，不需要人拍）：")
+    for nm, w in zip(r["cols"], r["weights"]):
+        kind = "效益型" if r["benefit_flags"][0] else "成本型"
+        print(f"    {nm[:26]:<28}{w:>8.4f}")
+    print()
+    print(f"  {'排名':<6}{'行号':<8}{'得分':>8}")
+    for rank, i in enumerate(r["order"][:12], 1):
+        print(f"  {rank:<6}#{i + 1:<7}{r['score'][i]:>8.4f}")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  sens —— 灵敏度
+# ══════════════════════════════════════════════════════════════════════
+def sens(ds: DS, yname: str, xnames: list[str], delta=0.1) -> dict:
+    """把每个自变量整体 +delta×极差，看 y 变化多少（用最优结构的拟合）。"""
+    X, y = ds.cols(xnames), ds.col(yname)
+    best_kind, best_ridge = "linear", 0.0
+    best_e = None
+    for label, kind, ridge in CANDS:
+        e = kfold(X, y, kind, ridge=ridge)
+        if e is None:
+            continue
+        if best_e is None or e.mean() < best_e:
+            best_e, best_kind, best_ridge = e.mean(), kind, ridge
+    A = design(X, best_kind)
+    AtA = A.T @ A
+    if best_ridge > 0:
+        AtA = AtA + best_ridge * np.eye(AtA.shape[0])
+    coef = np.linalg.solve(AtA, A.T @ y) if np.linalg.matrix_rank(AtA) == \
+        AtA.shape[0] else np.linalg.lstsq(A, y, rcond=None)[0]
+
+    y0 = A @ coef
+    base = float(y0.mean())
+    out = []
+    for j, nm in enumerate(xnames):
+        span = float(X[:, j].max() - X[:, j].min())
+        X2 = X.copy()
+        X2[:, j] += delta * span
+        A2 = design(X2, best_kind)
+        y2 = A2 @ coef
+        chg = float((y2 - y0).mean())
+        out.append(dict(name=nm, shift=delta, span=span,
+                        d_mean=chg, rel=chg / base if base else 0.0))
+    out.sort(key=lambda d: -abs(d["rel"]))
+    return dict(y=yname, x=xnames, kind=best_kind, rmse=best_e,
+                base=base, items=out, delta=delta)
+
+
+def print_sens(r: dict) -> None:
+    print("=" * 84)
+    print(f"灵敏度 · 目标「{r['y']}」（用 {r['kind']} 结构，CV={r['rmse']:.5f}）")
+    print("=" * 84)
+    print(f"  每个自变量整体 +{r['delta']:.0%} 极差，看目标均值怎么动"
+          f"（基准 {r['base']:.5f}）")
+    print()
+    print(f"  {'自变量':<24}{'Δ目标均值':>12}{'相对变化':>10}")
+    for it in r["items"]:
+        print(f"  {it['name'][:22]:<24}{it['d_mean']:>12.5f}{it['rel']:>10.2%}")
+    if r["items"]:
+        print()
+        print(f"  最敏感：{r['items'][0]['name']}（{r['items'][0]['rel']:+.2%}）")
+        print(f"  最不敏感：{r['items'][-1]['name']}（{r['items'][-1]['rel']:+.2%}）")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  judge —— 走架构闸门
+# ══════════════════════════════════════════════════════════════════════
+def judge(claims: list[dict]) -> list[dict]:
+    """claims: [{cid, text, e1, e2, e3, refuted}]。返回带判决的列表。"""
+    from harness import Claim, EvidenceEnv, run_gates
+    env = EvidenceEnv(3)
+    out = []
+    for c in claims:
+        cl = Claim(c["cid"], c["text"], e1=c.get("e1", 2), e2=c.get("e2", 1),
+                   e3=c.get("e3", 2), kind="world",
+                   refuted_by_test=c.get("refuted", False))
+        g = run_gates(cl, env)
+        out.append(dict(cid=c["cid"], text=c["text"], final=g["final"],
+                        C=g["C"], refuted=c.get("refuted", False),
+                        note=c.get("note", "")))
+    return out
+
+
+def print_judge(rows: list[dict]) -> None:
+    print("=" * 84)
+    print("判定 · 每条结论过一遍闸门")
+    print("=" * 84)
+    print(f"  {'编号':<5}{'结论':<40}{'C':>4}  {'判决':<9}{'能怎么写'}")
+    for r in rows:
+        if r["refuted"]:
+            style = "被数据推翻，改结论"
+        elif r["final"] == "pass":
+            style = "可断言"
+        elif r["final"] == "degrade":
+            style = "写进局限段"
+        else:
+            # reject 且没被推翻 = 数据不支持这条断言成立，不是"方向错"
+            style = "证据不支持，别写"
+        print(f"  {r['cid']:<5}{r['text'][:38]:<40}{r['C']:>4}  "
+              f"{r['final']:<9}{style}")
+    n = sum(1 for r in rows if r["final"] == "pass")
+    print()
+    print(f"  {n}/{len(rows)} 条可断言")
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  CLI
+# ══════════════════════════════════════════════════════════════════════
+def _need(ds, names):
+    return ds.pick(names)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="数学建模解题插件")
+    ap.add_argument("cmd", choices=["load", "eda", "fit", "opt", "score",
+                                    "sens", "all"])
+    ap.add_argument("--data", default="", help="附件路径，留空自动找")
+    ap.add_argument("--sheet", default=None)
+    ap.add_argument("--header-row", type=int, default=None, help="0 起")
+    ap.add_argument("--x", default="", help="自变量，逗号分隔（支持中文子串）")
+    ap.add_argument("--y", default="", help="因变量")
+    ap.add_argument("--min", default="", help="越小越好的目标列")
+    ap.add_argument("--max", default="", help="越大越好的目标列")
+    ap.add_argument("--benefit", default="", help="评价题的效益型指标")
+    ap.add_argument("--cost", default="", help="评价题的成本型指标")
+    ap.add_argument("--delta", type=float, default=0.1)
+    ap.add_argument("--json", action="store_true")
+    args = ap.parse_args()
+
+    path = args.data or find_xlsx()
+    if not path or not os.path.exists(path):
+        print(f"找不到数据：{path!r}；用 --data 指定")
+        return 2
+    ds = DS(path, args.sheet, args.header_row)
+
+    if args.cmd == "load":
+        print(f"{path}")
+        print(f"  sheet={ds.sheet}  表头第 {ds.header_row + 1} 行  "
+              f"{ds.n_rows} 行 × {len(ds.num_names)} 数值列")
+        for n, ok in zip(ds.names, ds.numeric):
+            print(f"    {'数值' if ok else '非数'}  {n}")
+        return 0
+
+    if args.cmd == "eda":
+        r = eda(ds)
+        if args.json:
+            r2 = dict(r)
+            r2["corr"] = None if r["corr"] is None else r["corr"].tolist()
+            print(json.dumps(r2, ensure_ascii=False, indent=2))
+        else:
+            print_eda(ds, r)
+        return 0
+
+    if args.cmd == "fit":
+        xs = _need(ds, args.x.split(","))
+        r = fit(ds, ds.pick([args.y])[0], xs)
+        if args.json:
+            print(json.dumps(r, ensure_ascii=False, indent=2))
+        else:
+            print_fit(r)
+        return 0
+
+    if args.cmd == "opt":
+        mins = _need(ds, args.min.split(",")) if args.min else []
+        maxs = _need(ds, args.max.split(",")) if args.max else []
+        cols = mins + maxs
+        if len(cols) < 2:
+            print("至少给两个目标列（--min / --max）")
+            return 2
+        r = opt(ds, cols, [True] * len(mins) + [False] * len(maxs))
+        if args.json:
+            print(json.dumps({"cols": r["cols"], "front": r["front"],
+                              "n_picks": r["n_picks"],
+                              "n_solutions": len(r["uniq"])},
+                             ensure_ascii=False, indent=2))
+        else:
+            print_opt(ds, r)
+        return 0
+
+    if args.cmd == "score":
+        ben = _need(ds, args.benefit.split(",")) if args.benefit else []
+        cst = _need(ds, args.cost.split(",")) if args.cost else []
+        if not ben and not cst:
+            print("至少给一个 --benefit 或 --cost")
+            return 2
+        r = score(ds, ben, cst)
+        if args.json:
+            print(json.dumps({"cols": r["cols"],
+                              "weights": r["weights"].tolist(),
+                              "order": r["order"][:20].tolist()},
+                             ensure_ascii=False, indent=2))
+        else:
+            print_score(ds, r)
+        return 0
+
+    if args.cmd == "sens":
+        xs = _need(ds, args.x.split(","))
+        r = sens(ds, ds.pick([args.y])[0], xs, args.delta)
+        if args.json:
+            print(json.dumps(r, ensure_ascii=False, indent=2))
+        else:
+            print_sens(r)
+        return 0
+
+    # all
+    if not args.y or not args.x:
+        print("all 需要 --y 和 --x")
+        return 2
+    xs = _need(ds, args.x.split(","))
+    yname = ds.pick([args.y])[0]
+
+    print_eda(ds, eda(ds))
+    print()
+    fr = fit(ds, yname, xs)
+    print_fit(fr)
+    print()
+    sr = sens(ds, yname, xs, args.delta)
+    print_sens(sr)
+    print()
+    if args.min:
+        mins = _need(ds, args.min.split(","))
+        maxs = _need(ds, args.max.split(",")) if args.max else []
+        orr = opt(ds, mins + maxs, [True] * len(mins) + [False] * len(maxs))
+        print()
+        print_opt(ds, orr)
+
+    # 判定：每条结论过一遍闸门
+    claims = []
+    if fr["best"] and fr["linear"]:
+        gain = fr["best"]["gain_vs_linear"]
+        # 断言的是「上复杂结构能换来明显收益」。
+        # 最优本身就是线性时，这条断言被数据否掉 —— 不是"我们没法比"。
+        complex_wins = (fr["best"]["kind"] != "linear"
+                        and gain is not None and gain >= MIN_GAIN)
+        claims.append(dict(
+            cid="F1",
+            text="上二次/对数/幂律能明显改善拟合",
+            e3=2, refuted=not complex_wins,
+            note=(f"最优是{fr['best']['label']}，{gain:+.1%}"
+                  if gain is not None else "")))
+        claims.append(dict(
+            cid="F2",
+            text="线性结构参数可辨识",
+            e3=2, refuted=not (fr["cond_linear"] < 1e4),
+            note=f"cond={fr['cond_linear']:.1f}"))
+
+    for it in sr["items"]:
+        # 灵敏度：断言「这个自变量对目标有实质影响（≥1%）」。
+        # 影响小 ≠ 方向错 —— 所以不显著时走 degrade，不走 refuted。
+        strong = abs(it["rel"]) >= 0.01
+        claims.append(dict(
+            cid=f"S{len(claims) + 1}",
+            text=f"{it['name']}对{yname}有实质影响",
+            e3=2, e2=1 if strong else 0, refuted=False,
+            note=f"±{sr['delta']:.0%} 极差 → {it['rel']:+.2%}"
+                 + ("" if strong else "（<1%，看不出）")))
+    if claims:
+        print()
+        print_judge(judge(claims))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+def partial_corr(ds, ycol: str, xcol: str, others=None) -> dict:
+    """控制 others 之后，y 与 x 的偏相关。
+
+    为什么要有这个包装
+    ------------------
+    mmkit.py 里那个 partial_corr(X, y, j) 收的是「矩阵 + 列索引」，
+    而 falsify.py 与 gate.py 一直按 (ds, 列名, 列名, [控制变量]) 调它 ——
+    签名不匹配，两处的偏相关对照从来没工作过，只在 except 里静默打印
+    「偏相关对照失败：AttributeError」。这是「造好了没接上」的典型。
+
+    实现：把 y 和 x 各自对控制变量回归，取残差的相关。
+    """
+    import numpy as np
+    cols = [xcol, ycol] + [c for c in (others or []) if c not in (xcol, ycol)]
+    try:
+        M = np.column_stack([np.asarray(ds.col(c), dtype=float) for c in cols])
+    except Exception:                               # noqa: BLE001
+        return {"r": None}
+    M = M[~np.isnan(M).any(axis=1)]
+    n = len(M)
+    if n < 5:
+        return {"r": None}
+    k = M.shape[1]
+    Z = np.column_stack([np.ones(n)] + [M[:, i] for i in range(2, k)])
+
+    def _resid(v):
+        beta, *_ = np.linalg.lstsq(Z, v, rcond=None)
+        return v - Z @ beta
+
+    rx, ry = _resid(M[:, 0]), _resid(M[:, 1])
+    den = float(np.sqrt((rx ** 2).sum() * (ry ** 2).sum()))
+    if den <= 0:
+        return {"r": None, "n": n}
+    return {"r": float((rx * ry).sum() / den), "n": n}
+

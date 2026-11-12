@@ -1,0 +1,32 @@
+{
+  "id": "M003",
+  "name": "Pareto front for competing objectives",
+  "name_cn": "多目标帕累托前沿",
+  "when": "两个以上目标互相冲突，不能同时最优，需要给出取舍集合而不是单一解",
+  "when_not": "目标可以加权成单一指标且权重有客观依据 → 直接用加权和；目标其实不冲突 → 前沿无信息量",
+  "assumptions": [
+    "All objectives have been oriented the same way, all minimised or all maximised. Otherwise dominance is undefined.",
+    "The sampled designs cover the body of the design space, so the front is observed rather than extrapolated.",
+    "The conflict between objectives is real, not an artefact of too few samples."
+  ],
+  "breaks_when": [
+    "Fewer than about 50 samples: the front holds only a handful of points, and its shape between them is interpolation rather than evidence.",
+    "The objectives are strongly correlated: the front degenerates to a line, which means the two objectives are measuring one thing.",
+    "A feasibility boundary is active: infeasible designs must not appear on the front, and a front computed without the constraint is meaningless."
+  ],
+  "report_must_include": [
+    "number of front points against the total",
+    "number of objectives",
+    "whether objectives were oriented",
+    "the definition of the feasible set"
+  ],
+  "refs": [
+    "Pareto, V. (1906). Manuale di Economia Politica. Milan: Societa Editrice Libraria.",
+    "Deb, K. (2001). Multi-Objective Optimization Using Evolutionary Algorithms. Chichester: Wiley."
+  ],
+  "our_impl": "mm.pareto_idx",
+  "strength": {
+    "All objectives have been oriented the same way, all minimised or all maximised": "strong",
+    "The sampled designs cover the body of the design space, so the front is not an artefact of a sparse sample": "weak"
+  }
+}

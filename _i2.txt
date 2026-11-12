@@ -1,0 +1,28 @@
+﻿  取出 Optimal design 块：955-969 行（15 行）
+  原 Problem 2 已降为 Problem 1 的 Results 小节
+  新的 Problem 2 已插到 Problem 3 之前
+
+  章节结构：
+      Introduction
+      Assumptions and Notations
+        Assumptions
+        Notation
+      Problem 1: How the geometry governs thermal resistance
+        Analysis
+        Model
+        Results
+        The three models and why all three are needed
+        Model structure selection
+        Goodness of fit and transformation robustness
+      Problem 2: Optimal design under constraints
+        Optimal design problem
+      Problem 3: How stable are the conclusions?
+      Evaluation
+        Strengths
+        Limitations
+      AI Disclosure and Human Verification
+        Declaration
+        Human verification
+      Core Code
+
+竞赛规则检查：7/7 通过

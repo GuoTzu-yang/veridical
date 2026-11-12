@@ -1,0 +1,14 @@
+\subsection{The ordering of the factors}
+Reading the coefficient table and the response surfaces together gives the
+influence pattern that the rest of the report relies on. The pin-fin
+width ratio carries the largest coefficient on every indicator, and it
+acts in opposite directions on the two that matter for cost: it lowers
+the thermal resistance and it raises the pressure drop. The manifold
+depth ratio is the weakest of the three on the response itself but the
+strongest on the flow distribution, which is why it enters the
+temperature indicator with a smaller magnitude and a sign of its own. The
+row count matters least on average, yet it is the factor that converts a
+low pressure drop into a high temperature non-uniformity. This ordering
+is what makes the design problem a genuine trade-off: the factor that
+helps most on the objective of interest is also the one that costs most
+on the operating cost.

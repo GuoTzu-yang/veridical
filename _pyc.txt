@@ -1,0 +1,118 @@
+﻿======================================================================
+模块级
+======================================================================
+  co_names（引用的名字）: ('__doc__', '__future__', 'annotations', 'os', 're', 'sqlite3', 'sys', 'dataclasses', 'dataclass', 'field', 'path', 'dirname', 'abspath', '__file__', 'HERE', 'kb_root', 'KB', 'join', 'REPOS', 'INDEX', 'BM25_WEIGHTS', 'CATEGORIES', 'Hit', 'Assessment', '_sanitize', '_connect', 'search', 'read', 'verify', 'assess', 'stats', 'selftest', 'main', '__name__', 'SystemExit')
+  co_varnames: ()
+
+── kb_root  参数=()  局部=('env', 'sib')
+   | 知识库根目录（含 repos/ 与 index.db 的那一层）。
+   字符串常量(5): ['知识库根目录（含 repos/ 与 index.db 的那一层）。', 'KB_ROOT', '..', 'knowledge-base', 'repos']
+   引用: ('os', 'environ', 'get', 'path', 'abspath', 'normpath', 'join', 'HERE', 'isdir')
+
+── Hit  参数=()  局部=()
+   | Hit
+   字符串常量(9): ['Hit', '一条命中 = 一个可以被核对的具体位置。', 'str', 'repo', 'category', 'path']
+   引用: ('__name__', '__module__', '__qualname__', '__doc__', '__annotations__', 'cite', 'url', 'local')
+
+  ── cite  参数=('self',)  局部=()
+     | 可引用的出处。e1=2 要求指到具体位置，就是这个字符串。
+     字符串常量(1): ['可引用的出处。e1=2 要求指到具体位置，就是这个字符串。']
+     引用: ('repo', 'path')
+
+  ── url  参数=('self',)  局部=()
+     字符串常量(2): ['https://github.com/', '/blob/HEAD/']
+     引用: ('repo', 'path')
+
+  ── local  参数=('self',)  局部=('base', 'p')
+     | 本机原文路径。
+     字符串常量(5): ['本机原文路径。', '__', 'src', 'nt', '\\\\?\\']
+     引用: ('os', 'path', 'join', 'REPOS', 'repo', 'replace', 'sep', 'name', 'startswith')
+
+── Assessment  参数=()  局部=()
+   | Assessment
+   字符串常量(10): ['Assessment', '这批命中能支持多强的证据。', 'int', 'hits', 'e1_cap', 'e2_cap']
+   数值常量: [0]
+   引用: ('__name__', '__module__', '__qualname__', '__doc__', 'hits', '__annotations__', 'e1_cap', 'e2_cap', 'field', 'list', 'repos', 'why', 'as_claim_dims')
+
+  ── as_claim_dims  参数=('self',)  局部=()
+     | 直接喂给 harness.Claim 的字段。
+     字符串常量(1): ['直接喂给 harness.Claim 的字段。']
+     引用: ('e1_cap', 'e2_cap')
+
+── _sanitize  参数=('q',)  局部=('p', 'parts')
+   | 把用户输入洗成 FTS5 认的查询。
+   | 
+   |     FTS5 对 `-` `(` `"` `*` 这些有语法意义，直接扔进去会抛
+   |     OperationalError。这里只保留字母数字和下划线，其余当分隔符。
+   字符串常量(2): ['把用户输入洗成 FTS5 认的查询。\n\n    FTS5 对 `-` `(` `"` `*` 这些有语法意义，直接扔进去会抛\n    OperationalError。这里只保留字母数字和下划线，其余当分隔符。\n    宁可少召回，也不要让整次检索炸掉。\n    ', '[^\\w\\u4e00-\\u9fff]+']
+   引用: ('re', 'split', 'join')
+
+── _connect  参数=()  局部=('conn',)
+   字符串常量(3): ['file:', '?mode=ro', 'PRAGMA query_only=ON']
+   数值常量: [15]
+   引用: ('os', 'path', 'exists', 'INDEX', 'sqlite3', 'connect', 'execute')
+
+── search  参数=('query', 'category', 'repo', 'limit')  局部=('q', 'conn', 'where', 'params', 'sql', 'rows', 'r')
+   | 按关键词检索。返回按 bm25 排序的命中（越小越相关）。
+   | 
+   |     这是**检索**，不是判定。拿到 Hit 之后该做的第一件事是 read() 核对原文。
+   字符串常量(7): ['按关键词检索。返回按 bm25 排序的命中（越小越相关）。\n\n    这是**检索**，不是判定。拿到 Hit 之后该做的第一件事是 read() 核对原文。\n    ', 'files MATCH ?', 'category = ?', 'repo = ?', "SELECT repo, category, path, snippet(files, 3, '…', '…', '…', 18), bm25(files, ?,?,?,?) AS r FROM files WHERE ", ' AND ']
+   数值常量: [1, 0, 2, 3, 4]
+   引用: ('_sanitize', '_connect', 'append', 'join', 'list', 'BM25_WEIGHTS', 'max', 'int', 'execute', 'fetchall', 'sqlite3', 'Error', 'close', 'Hit')
+
+── read  参数=('hit', 'max_chars')  局部=('f', 'e')
+   | 读命中处的原文。引用之前**必须**走这一步——摘要不是证据。
+   字符串常量(6): ['读命中处的原文。引用之前**必须**走这一步——摘要不是证据。', 'utf-8', 'replace', '<<读不到原文：', ': ', '>>']
+   引用: ('open', 'local', 'read', 'OSError', 'type', '__name__')
+
+── verify  参数=('hit', 'terms')  局部=()
+   | 原文里真的出现这些词吗。
+   | 
+   |     FTS 是词干/分词匹配，摘要也可能截断得只剩半句。
+   |     只有原文真含这些词，这条命中才算**核对过**。
+   字符串常量(2): ['原文里真的出现这些词吗。\n\n    FTS 是词干/分词匹配，摘要也可能截断得只剩半句。\n    只有原文真含这些词，这条命中才算**核对过**。\n    ', '<<读不到']
+   数值常量: [200000]
+   引用: ('read', 'lower', 'startswith', 'all')
+
+── assess  参数=('hits', 'terms', 'verified_only')  局部=('used', 'h', 'repos', 'e1', 'e2', 'why')
+   | 这批命中能撑起多强的证据。
+   | 
+   |     规则（和 harness 的 e1/e2 语义对齐）：
+   |         e1：能指到具体文件 → 2；只有仓库名 → 1；没有 → 0
+   字符串常量(7): ['这批命中能撑起多强的证据。\n\n    规则（和 harness 的 e1/e2 语义对齐）：\n        e1：能指到具体文件 → 2；只有仓库名 → 1；没有 → 0\n        e2：**不同仓库** ≥2 → 2；只有 1 个仓库 → 1；没有 → 0\n\n    第二条是这个库最容易被误用的地方：\n        同一个仓库的 10 个文件，看起来"证据很多"，\n        其实是**一个人的十句话**，不是十个独立来源。\n    ', '没有命中 → 不能拿它当证据', ' 条命中，但没有一条能在原文里核对到关键词 → 不能用', ' 条可核对命中，来自 ', ' 个仓库', '（多仓库 → 可算独立）']
+   数值常量: [0, 2, 1]
+   引用: ('Assessment', 'verify', 'len', 'sorted', 'repo', 'all')
+
+── stats  参数=()  局部=('conn', 'n_file', 'r', 'repos', 'cats', 'e')
+   | 库里有什么。用来在报告里交代覆盖面，免得把"没搜到"当"不存在"。
+   | 
+   |     第 80 轮换掉了这里的查询对象：
+   |     `files` 是 **FTS5 虚表**，对它做 count(*)/DISTINCT 只能全表扫
+   字符串常量(6): ['库里有什么。用来在报告里交代覆盖面，免得把"没搜到"当"不存在"。\n\n    第 80 轮换掉了这里的查询对象：\n    `files` 是 **FTS5 虚表**，对它做 count(*)/DISTINCT 只能全表扫\n    （298,500 行，单条 ~2 秒，冷缓存时三条合计 32 秒）。\n    而库里本来就有两张普通表装着同样的信息：\n        meta   —— 每个文件一行，带 repo；count(*) 0.02s\n        repos  —— 每个仓库一行，带 category；DISTINCT 0.000s\n    实测合计 6.048s → 0.046s（131 倍），\n    返回的三个值（298500 / 30 个 repo / 21 个 category）**逐字相同**。\n\n    注意 category 只在 repos 上有（每个仓库一个分类），\n    它跟 files.category 的 DISTINCT 结果一致 —— 已逐项比对过。\n    ', '没有 index.db', 'SELECT count(*) FROM meta', 'SELECT DISTINCT repo FROM meta ORDER BY repo', 'SELECT DISTINCT category FROM repos ORDER BY category', ': ']
+   数值常量: [0, 1048576]
+   引用: ('_connect', 'execute', 'fetchone', 'fetchall', 'sqlite3', 'Error', 'type', '__name__', 'close', 'round', 'os', 'path', 'getsize', 'INDEX')
+
+── selftest  参数=()  局部=('check', 'st', 'hits', 'ok_read', 'h', 'one_repo', 'a1', 'multi')
+   字符串常量(34): ['========================================================================', '检索库自测', '索引可用', 'ok', 'why', '\nFAILED: ']
+   数值常量: [0, 40, 1, 30, 3, 250000, 8, 5, 2, 46]
+   引用: ('print', 'stats', 'get', 'str', 'len', 'search', 'all', 'cite', 'sum', 'min', 'verify', 'repo', 'assess', 'e2_cap')
+
+  ── check  参数=('name', 'cond', 'detail')  局部=()
+     字符串常量(3): ['  [PASS] ', '  — ', '  [FAIL] ']
+     数值常量: [1]
+     引用: ('print',)
+
+── main  参数=()  局部=('args', 'cmd', 'st', 'q', 'cat', 'repo', 'limit', 'i')
+   字符串常量(31): ['selftest', 'stats', 'ok', '索引不可用:', 'why', '文件 ']
+   数值常量: [1, 0, 2, 10, 120]
+   引用: ('sys', 'argv', 'print', '__doc__', 'selftest', 'stats', 'get', 'len', 'join', 'int', 'search', '_sanitize', 'split', 'assess')
+
+======================================================================
+类定义
+======================================================================
+  class Hit
+    def cite(self)
+    def url(self)
+    def local(self)
+  class Assessment
+    def as_claim_dims(self)

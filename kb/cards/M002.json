@@ -1,0 +1,32 @@
+{
+  "id": "M002",
+  "name": "Partial correlation",
+  "name_cn": "偏相关分析",
+  "when": "要判断某个因子在其他因子同时在场时的独立影响，且因子之间本身相关",
+  "when_not": "要看非线性关系 → 用偏依赖图或加样条；要看因果 → 需要实验或工具变量",
+  "assumptions": [
+    "The relationship between the response and each factor is approximately linear over the sampled region.",
+    "No unobserved confounding variable is present. Without this, a partial correlation is an association, not an effect.",
+    "No near-perfect collinearity exists among the factors, which would make the partial correlation unstable and prone to sign changes."
+  ],
+  "breaks_when": [
+    "Fewer than about 30 observations: the asymptotic critical value $z_{\\alpha/2}/\\sqrt{n-k-1}$ no longer holds, and the significance judgement becomes unreliable.",
+    "Collinearity is strong: the partial correlation can exceed the zero-order correlation and flip sign under small resampling.",
+    "Non-linearity is real: the partial correlation understates the influence, and the understatement cannot be detected from the coefficient alone."
+  ],
+  "report_must_include": [
+    "sample size $n$",
+    "degrees of freedom $k$",
+    "critical value $r_{\\mathrm{crit}}$",
+    "the correlation $r$ and its square"
+  ],
+  "refs": [
+    "Pearson, K. (1896). Mathematical contributions to the theory of evolution. Philosophical Transactions of the Royal Society A, 187, 253-318.",
+    "Cohen, J. (1988). Statistical Power Analysis for the Behavioral Sciences, 2nd edition. Lawrence Erlbaum."
+  ],
+  "our_impl": "mm.partial_corr",
+  "strength": {
+    "No unobserved confounding variable is present": "weak",
+    "No near-perfect collinearity exists among the factors, which would inflate the variance of the estimate": "strong"
+  }
+}

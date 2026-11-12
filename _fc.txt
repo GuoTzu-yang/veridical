@@ -1,0 +1,567 @@
+﻿
+  plot_scatter  (2 处)
+     1545: items = [(f"簇 {j + 1}（{r['sizes'][j]} 行）",
+     1547: p.title = f"{xname} vs {yname}（K-means k={r['k']} 着色）"
+
+  plot_forecast  (3 处)
+     1562: p = _Plot(title=f"预测 · {yname}", xlabel="期", ylabel=yname)
+     1571: p.legend([("历史", (31, 119, 180)), (f"预测（{r['best']}）",
+     1573: ("95% 区间", tuple(int(c * 0.25 + 255 * 0.75)
+
+  plot_pareto  (6 处)
+     1604: return dict(path=None, why="帕累托图至少需要两列")
+     1608: p = _Plot(title=f"帕累托前沿（{cols[0]} vs {cols[1]}）",
+     1617: p.legend([("被支配", (190, 195, 200)),
+     1618: (f"帕累托前沿（{len(front)} 点）", (214, 39, 40))])
+     1631: """相关系数 → 颜色。正相关红、负相关蓝、0 接近白。"""
+     1638: """列名太长就截断 —— 画布里塞不下，会被裁成半个字。"""
+
+  plot_corr  (2 处)
+     1644: """相关系数热力图。模块二明确要的第一张图。"""
+     1647: return dict(path=None, why="热力图至少需要两个数值列")
+
+  plot_pred  (3 处)
+     1690: """真实值 vs 预测值。模块二明确要的第二张图。
+     1692: 带 y=x 对角线：点贴着线才叫拟合好，偏离方向一看就知道系统性偏差。
+     1696: return dict(path=None, why="pred 需要可用的 --x 与 --y")
+
+  plot_sens  (3 处)
+     1733: """敏感性分析折线。模块二明确要的第三张图。
+     1735: items: [{label, base, plus, minus}] —— 参数名 + 原值 + 上下扰动后的结果
+     1739: return dict(path=None, why="没有可画的敏感性结果")
+
+  plot_flow  (3 处)
+     1781: """算法流程图。模块二明确要的第四张图。
+     1783: 用方框 + 箭头竖排。不依赖 graphviz / mermaid 渲染器。
+     1787: return dict(path=None, why="流程图至少 3 步")
+
+  plot_box  (5 处)
+     1819: """箱线图。模块二点名要的第二张（相关性热力图或箱线图）。
+     1821: 为什么要看箱线图：均值会被极端值带跑，中位数和四分位距不会。
+     1822: 数模里凭均值写结论是最常见的错。
+     1826: return dict(path=None, why="没有可画的数值列")
+     1827: cols = cols[:8]                      # 太多列会挤成一团
+
+  plot_hist  (2 处)
+     1878: """直方图 + 正态参考曲线。看分布形状，决定要不要变换。"""
+     1880: return dict(path=None, why=f"{col!r} 不是数值列")
+
+  plot_resid  (4 处)
+     1916: """残差图：残差 vs 拟合值。
+     1918: 这是判断线性假设成立的**第一张该看的图**：
+     1919: 有喇叭口 → 异方差；有弯曲 → 模型形式不对。
+     1923: return dict(path=None, why="resid 需要 --x 与 --y")
+
+  plot_qq  (510 处)
+     1959: """正态 Q-Q 图。残差是否近似正态 —— 决定 t 检验能不能信。"""
+     1962: return dict(path=None, why="qq 需要 --x 与 --y")
+     2009: """灰色预测 GM(1,1)。适合**小样本、近似指数**的序列（4~10 个点）。
+     2011: 为什么数模要它：
+     2012: 当手里只有五六个历史点时，ARIMA 拟合不出来、回归的置信区间宽到没用。
+     2013: GM(1,1) 只要 4 个点就能跑，是这类题的常见答案。
+     2015: 模型：设原始序列 x0，一次累加得 x1，
+     2017: 最小二乘解 a、b 后，
+     2019: x̂0(k+1) = x̂1(k+1) - x̂1(k)        ← 累减还原
+     2021: 检验（两个都要给，缺一个就没法判断可信度）：
+     2022: 后验差比  C = S2 / S1        （S1 原始序列标准差，S2 残差标准差）
+     2023: 小误差概率 P = P{|e - ē| < 0.6745·S1}
+     2024: C 越小越好；P 越大越好。
+     2025: 好：C<0.35 且 P>0.95；合格：C<0.5 且 P>0.8；否则**不合格**。
+     2030: return dict(ok=False, why=f"只有 {n} 个点，GM(1,1) 至少要 4 个")
+     2032: return dict(ok=False, why="序列含 0 或负数，GM(1,1) 要求全为正")
+     2034: return dict(ok=False, why="序列完全不变，没有可提取的趋势")
+     2036: x1 = np.cumsum(x)                       # 一次累加 AGO
+     2037: z1 = 0.5 * (x1[1:] + x1[:-1])           # 紧邻均值生成
+     2044: return dict(ok=False, why="发展系数 a≈0，模型退化为常数，不适用")
+     2060: grade = "好"
+     2062: grade = "合格"
+     2064: grade = "不合格"
+     2076: if grade == "不合格":
+     2077: warn.append(f"后验差检验不合格（C={C:.3f}, P={P:.3f}）—— "
+     2078: f"这个预测不能当作结论")
+     2080: warn.append(f"发展系数 a={a:.4f} 很小，序列接近平缓，"
+     2081: f"此时预测的有效期很短")
+     2083: warn.append(f"{n} 个点已经偏多，GM(1,1) 的优势（小样本）没了，"
+     2084: f"考虑用常规时间序列模型")
+     2095: print(f"灰色预测 GM(1,1)（{r['n']} 个历史点，外推 {len(r['fut'])} 步）")
+     2097: print(f"  发展系数 a = {r['a']:+.6f}    灰作用量 b = {r['b']:.6f}")
+     2103: print(f"  时间响应式：x̂1(k+1) = {coef:.4f}·e^({-r['a']:+.6f}k) {tail_s}")
+     2105: print(f"  {'期':>4}{'实测':>14}{'拟合':>14}{'残差':>14}")
+     2109: print(f"  后验差比 C = {r['C']:.4f}    小误差概率 P = {r['P']:.3f}    "
+     2110: f"精度等级 **{r['grade']}**")
+     2111: print(f"  （判据：好 C<0.35 且 P>0.95；合格 C<0.5 且 P>0.8；否则不合格）")
+     2113: print(f"  {'外推步':>8}{'预测':>16}")
+     2121: print("  边界：GM(1,1) 假设序列近似**指数**变化。S 形或周期序列会被它拉直，")
+     2122: print("        拟合值看着还行、外推却会跑飞 —— 所以后验差检验不能省。")
+     2132: 节点必须是整数下标；权重可以用 1/3 这种写法。
+     2140: raise ValueError(f"边 {seg!r} 缺少权重（应为 u-v:w）")
+     2143: raise ValueError(f"边 {seg!r} 缺少端点（应为 u-v:w）")
+     2148: raise ValueError("没有解析出任何边")
+     2156: print(f"单源最短路（Dijkstra）· 起点 {r['src']}")
+     2159: print(f"  {r['src']} → {r['dst']}：**不可达**（没有通路）")
+     2161: print(f"  {r['src']} → {r['dst']}  距离 {r['dist']:.6f}")
+     2162: print(f"  路径 {' → '.join(map(str, r['path']))}")
+     2164: print(f"  {'目标':>6}{'距离':>14}   路径")
+     2169: if r["paths"][t] else "不可达")
+     2172: print("  边界：Dijkstra 要求**非负权**。有负权会被它拒绝——")
+     2173: print("        负权图要用 Bellman-Ford，别把 Dijkstra 硬套上去。")
+     2175: print(f"最小生成树（Kruskal）· {r['n']} 个点")
+     2177: print(f"  权重合计 {r['weight']:.6f}，选了 {len(r['mst'])} 条边")
+     2188: print("  ✓ 图连通，这是一棵真正的生成树（边数 = 点数 - 1）")
+     2190: print(f"最大流（Edmonds-Karp）· {r['s']} → {r['t']}")
+     2192: print(f"  最大流 = {r['max_flow']:.6f}（{r['augmentations']} 次增广）")
+     2194: print("  边界：最大流只回答「最多能送多少」。管道长度、成本、时延")
+     2195: print("        都不在这个模型里 —— 那些要建最小费用流。")
+     2197: print(f"旅行商（最近邻 + 2-opt）· {r['n']} 个点")
+     2199: print(f"  路径 {' → '.join(map(str, r['tour']))} → {r['tour'][0]}")
+     2200: print(f"  总长度 {r['length']:.6f}")
+     2201: print(f"  下界   {r['lower_bound']:.6f}（每点最短两边之和 /2）")
+     2202: print(f"  差距   {r['gap']:.2%}")
+     2208: print("  ✓ 与下界差距很小，可以当作最优解用")
+     2210: print("  边界：这是**近似解**，不保证最优。论文里要写「用 2-opt 近似」，")
+     2211: print("        不能写「求得最优路径」—— 除非你用 Held-Karp 跑了精确解。")
+     2217: """把一次运行的结果写成 markdown —— 直接能贴进论文的形态。
+     2219: 不写花哨排版，只写三样：数字、判决、依据。
+     2220: 论文里最容易被追问的就是这三样，先摆在这里。
+     2224: A(f"# 建模报告 · {rep.get('file', '')}")
+     2226: A(f"- 数据：`{rep.get('file', '')}` / sheet `{rep.get('sheet', '')}`"
+     2227: f" / {rep.get('rows', '?')} 行")
+     2228: A(f"- 数值列：{', '.join(rep.get('cols', []))}")
+     2234: A("## 一、数据体检")
+     2236: A("| 列 | min | max | mean | std | 取值数 | 异常值 | 分布 |")
+     2239: dist = "近正态" if c["near_normal"] else "偏离"
+     2245: A(f"ID 列（不进 VIF）：{', '.join(e['id_cols'])}")
+     2251: A("## 二、结构竞速")
+     2253: A(f"目标 `{f['y']}` ← 自变量 {', '.join(f['x'])}")
+     2255: A("| 候选 | CV RMSE | 相对线性 |")
+     2259: A(f"| {c['label']} | 不适用 | — |")
+     2265: A(f"最优：**{f['best']}**，线性结构条件数 {f['cond_linear']:.2f}。")
+     2270: A("## 三、结论验证（多通道并行）")
+     2272: A("| 编号 | 结论 | 试判 | C | 判决 | 能怎么写 |")
+     2276: style = "被方向通道否决，改结论"
+     2278: style = "被数据推翻，改写法"
+     2280: style = "可断言"
+     2282: style = "写进「局限」段"
+     2284: style = "证据不足"
+     2286: style = "提示，不是结论"
+     2290: A("每条结论的通道级证据见屏幕输出；这里只留最终判决。")
+     2295: A("## 四、跨主张一致性")
+     2301: A("没有互斥主张同时对得上，这一组自洽。")
+     2307: A("## 五、多目标")
+     2309: A(f"- 目标：{', '.join(o['cols'])}")
+     2310: A(f"- 帕累托前沿：{o['front']} / {o['n_rows']} 个点")
+     2311: A(f"- 权重扫描：{o['n_picks']} 组权重 → {o['n_solutions']} 个不同最优解")
+     2313: A(f"- 最稳解：第 {o['most_stable']} 行，"
+     2314: f"占 {o['stable_share']:.0%} 权重空间")
+     2319: A("## 六、约束优化")
+     2322: A(f"- 自变量全离散：{s['n_combos']} 种组合")
+     2323: A(f"- 满足约束的已观测组合：{s['n_observed_ok']} 个")
+     2324: A(f"- 满足约束的未观测组合：{s['n_predicted_ok']} 个")
+     2327: A(f"- **观测最优**：第 {bo['row']} 行，目标 = {bo['obj']:.6f}"
+     2328: f"（真做过的组合）")
+     2333: A("## 边界声明")
+     2335: A(f"- e3（可复现）= {'2 已声明重跑' if rep.get('reproduced') else '1 未重跑'}")
+     2336: A("- 未重跑时最高只能判 degrade：单份数据的内部一致性撑不起「可复现」")
+     2337: A("- 权重区间只说明「在这个区间内结论不变」，取哪个值是立场，不是数据")
+     2346: """把「丢了多少行 / 哪些列不参与建模 / 哪些列不能当变量」打出来。
+     2348: 悄悄丢数据是最容易导致错误结论的事：真实 CSV 里一个稀疏列
+     2349: 就能让九成行消失，用户如果看不到这个提示，会把
+     2350: 「只剩 300 行」当成「本来就只有 300 行」。
+     2352: 第 88 轮在 A 题真实附件上补了两条：
+     2353: · TIME 列会被当成数值列 —— 有人真的会拿它当目标变量
+     2354: · CLR 这类准常数列（355 行里 354 个是 5.0）进模型只会制造噪声
+     2367: print(f"  ⚠ 时间轴列 {tc} —— 这是时间，不是被解释变量。"
+     2368: f" 不要把它当 --y（真要用时间序列，用 forecast 子命令）")
+     2374: print(f"  ⚠ 准常数列 {dg} —— 九成以上是同一个值，"
+     2375: f"方差近 0，当自变量没有意义")
+     2380: """一个单元格值 → CSV 文本。
+     2382: 第 89 轮真踩到：A 题附件里 DATE 列是 datetime.datetime，
+     2383: float(datetime) 直接 TypeError，整个 merge 崩掉、
+     2384: CSV 写了一半，后面 clean 读到空表还报"成功"。
+     2403: """把已生成的图收进论文。
+     2405: 图由 mmkit plot 产出；这里只回答"有哪些图能用"。
+     2406: 缺的图不会被编造 —— 论文里自然就不出现那一节。
+     2436: print(f"找不到数据：{path!r}；用 --data 指定")
+     2450: print(f"  拒绝：{ycol!r} 是时间轴，不能当被解释变量。")
+     2451: print("    时间序列预测请用：mmkit.py forecast --y <指标>")
+     2452: print("    或把 --y 换成真正的目标列（某个测量值）")
+     2459: sec(f"数学建模插件 · {rep['file']}")
+     2460: print(f"  sheet={ds.sheet}  表头第 {ds.header_row + 1} 行  "
+     2461: f"{ds.n_rows} 行 × {len(ds.num_names)} 数值列")
+     2463: print(f"  目标 y = {ycol}")
+     2465: print(f"  自变量 = {xs}")
+     2473: vif_note="ID 列已排除在 VIF 之外")
+     2500: print("\n没给 --y / --x，跳过建模段（体检与评价已做）")
+     2530: sec("四、你声明的主张（可被推翻）")
+     2532: print(f"    {p['name']} 方向 {'正' if p['want'] > 0 else '负'}"
+     2535: print(f"    解析不了：{bad}")
+     2537: sec("四、数据提示（**不是结论**）")
+     2538: print("    你没给 --claim，所以下面这些只是数据里看到的，")
+     2539: print("    工具不会替你把它当成主张。要验方向请加 --claim 名字:正/负")
+     2543: print(f"    n = {h0['n']}，α=0.05 的显著临界 |r| ≈ "
+     2545: print(f"    （样本越大临界越低 —— 但「显著」不等于「重要」，"
+     2546: f"看最后一列的解释力）")
+     2549: print("    自变量                     偏相关   方向    判定")
+     2553: d = {1: "正", -1: "负", 0: "—"}[h["sign"]]
+     2561: sec("五、多通道并行验证（你声明的主张）")
+     2564: c = lanes.Claim(f"K{i}", f"{p['name']} 对 {ycol} 的影响方向"
+     2565: f"为{'正' if p['want'] > 0 else '负'}",
+     2583: print("    ── 按来源汇总")
+     2585: print(f"    ── 闸门：{v['final']}  C={v['C']}"
+     2586: + ("  〔被推翻〕" if v["refuted"] else ""))
+     2590: sec("五、多通道并行验证（提示模式 —— 不许出结论）")
+     2591: print("    提示模式下不跑 direction（没声明方向），其余通道照跑。")
+     2592: print("    这些票的含义是「这个线性模型在这份数据上站不站得住」，")
+     2593: print("    不是「你的结论对不对」。")
+     2596: f"（提示）{h['name']} 与 {ycol} 存在可建模的关系",
+     2597: X=X, y=y, sign={})     # 空 sign → direction 必然 UNKNOWN
+     2612: print(f"  【{c.cid}】{h['name']}  偏相关 {pc_s}")
+     2614: print(f"    ── 闸门：{v['final']}  C={v['C']}（提示模式上限）")
+     2623: sec("六、跨主张一致性")
+     2665: sec("八、这张表对应论文怎么写")
+     2666: print(f"  {'编号':<6}{'结论':<40}{'判决':<10}{'能怎么写'}")
+     2670: style = "被方向通道否决，改结论"
+     2672: style = "被数据推翻，改写法"
+     2674: style = "可断言"
+     2676: style = "写进'局限'段"
+     2678: style = "证据不足，先补"
+     2680: style = "提示，不是结论" if r["final"] != "reject" else style
+     2683: print("  三条线：")
+     2684: print("    pass      → 进结论段")
+     2685: print("    degrade   → 进「局限与展望」段，写成本文条件下成立")
+     2686: print("    reject    → 不许写；要么改结论，要么改主张")
+     2690: sec("九、这份报告管到哪")
+     2691: print("  能管：")
+     2692: print("    · 结构竞速、方向验证、多目标前沿、灵敏度、跨主张一致性")
+     2693: print("    · 每一条都给了通道级证据（谁支持、谁反对、谁不知道）")
+     2695: print("  不管：")
+     2696: print("    · 目标该有哪几个 —— 题意")
+     2697: print("    · 权重取多少 —— 工具只给稳定区间，取点是立场")
+     2698: print("    · 模型创新 —— 工具验已有的，不发明新的")
+     2700: print(f"  e3（可复现）={'2 已声明重跑' if reproduced else '1 未重跑'}")
+     2702: print("  → 可以判 pass。注意这个 2 是你声明的，工具没法替你验证；")
+     2703: print("    写进论文时要把「怎么重跑的」一并交代。")
+     2705: print("  → 最高只能是 degrade。这不是缺陷，是闸门在守一句实话："
+     2706: "单份数据的内部一致性撑不起「可复现」。")
+     2716: print(f"  报告已写入 {out_path}（{len(md)} 字符，"
+     2717: f"{md.count(chr(10))} 行）")
+     2719: print(f"  写报告失败：{e}")
+     2754: print(f"LaTeX 论文已写入 {tex_path}")
+     2755: print(f"  {info['lines']} 行 / {info['chars']} 字符 / "
+     2756: f"{info['n_env']} 个环境")
+     2758: print("  结构自检：全部通过"
+     2759: + (f"（{info['n_todo']} 处待补）"
+     2762: print("  ✗ 结构自检发现问题：")
+     2765: print("  编译：本机没有 LaTeX，把 .tex 传到 Overleaf，"
+     2766: "选 pdfLaTeX 或 XeLaTeX 即可")
+     2768: print(f"  写 LaTeX 失败：{e}")
+     2779: """跑 fn，抛异常返回 True。用来断言「该报错的地方确实报错」。"""
+     2801: print("mmkit.py 自检")
+     2805: print("\n一、偏相关")
+     2809: x2 = x1 * 0.9 + rng.normal(0, 0.05, n)      # 与 x1 高度共线
+     2814: ck("x1 偏相关为正", p0 is not None and p0 > 0, f"{p0:+.3f}")
+     2815: ck("x2 偏相关为负", p1 is not None and p1 < 0, f"{p1:+.3f}")
+     2818: ck("简单相关与偏相关不同（共线时）",
+     2823: print("\n二、主张解析")
+     2825: xs = ["针肋宽度比", "歧管深高比", "针肋排数"]
+     2826: got, bad = parse_claims(["深高:负", "宽度:正"], fake, xs)
+     2827: ck("解析出两条", len(got) == 2, str([g["name"] for g in got]))
+     2828: ck("深高匹配到第 2 列", got[0]["idx"] == 1 and got[0]["want"] == -1,
+     2830: ck("宽度匹配到第 1 列", got[1]["idx"] == 0 and got[1]["want"] == 1,
+     2832: ck("没有解析失败项", bad == [], str(bad))
+     2833: _, bad2 = parse_claims(["深高"], fake, xs)
+     2834: ck("没写方向要报错", len(bad2) == 1, str(bad2))
+     2835: _, bad3 = parse_claims(["不存在:正"], fake, xs)
+     2836: ck("列名匹配不到要报错", len(bad3) == 1, str(bad3))
+     2837: _, bad4 = parse_claims(["深高:乱七八糟"], fake, xs)
+     2838: ck("方向词认不出要报错", len(bad4) == 1, str(bad4))
+     2839: got5, _ = parse_claims(["排数=减"], fake, xs)
+     2840: ck("支持 = 分隔符", len(got5) == 1 and got5[0]["want"] == -1, str(got5))
+     2843: print("\n三、真数据全链路")
+     2848: ycol = ds.pick(["热阻"])[0]
+     2849: xsd = ds.pick(["宽度", "深高", "排数"])
+     2850: ck("真数据列匹配", len(xsd) == 3, str(xsd))
+     2853: ck("三个偏相关都算出来了",
+     2857: ck("深高对热阻偏相关为正（真题事实）",
+     2861: c = lanes.Claim("T1", "深高对热阻方向为负", X=Xa, y=ya, sign={1: -1})
+     2863: ck("反方向主张被否决", agg["vetoed"] is True, agg["why"][:50])
+     2864: ck("反方向主张判 reject", v["final"] == "reject", v["final"])
+     2866: c2 = lanes.Claim("T2", "深高对热阻方向为正", X=Xa, y=ya, sign={1: +1})
+     2868: ck("正方向主张不被否决", agg2["vetoed"] is False, v2["final"])
+     2870: ck("真数据可用（没附件则跳过）", True, "跳过")
+     2873: print("\n四、提示模式不许出结论")
+     2875: c = lanes.Claim("H1", "（提示）有可建模关系", X=Xa, y=ya, sign={})
+     2878: ck("空 sign 时 direction 必然 UNKNOWN",
+     2880: ck("提示模式拿不到 reject", v["final"] != "reject", v["final"])
+     2883: print("\n五、离散设计要走组合搜索，不走连续优化")
+     2887: xs = ds.pick(["宽度", "深高", "排数"])
+     2888: objc = ds.pick(["压降"])[0]
+     2889: cons = ["热阻<=0.74", "温度<=0.79"]
+     2891: ck("全离散数据被路由到 discrete",
+     2893: ck("组合数算对（5×4×6=120）",
+     2896: ck("给出观测最优", bo is not None, str(bo)[:60])
+     2898: ck("观测最优是第 62 行", bo["row"] == 62, f"第 {bo['row']} 行")
+     2899: ck("解全是离散档位里的值",
+     2905: ck("预测最优单独标注（有则必须 kind=predicted）",
+     2907: str(bp)[:60] if bp else "没有预测候选")
+     2918: ck("全连续数据不走 discrete",
+     2921: print("\n六、约束解析与容差")
+     2925: c1, why1 = parse_constraint("热阻<=0.74", ds)
+     2926: ck("约束解析成功", c1 is not None and c1["op"] == "<=", why1 or str(c1))
+     2927: ck("约束列匹配到全名",
+     2928: c1 and c1["col"] == "无量纲热阻", c1["col"] if c1 else "")
+     2929: _, why2 = parse_constraint("热阻~0.74", ds)
+     2930: ck("怪符号要报错", bool(why2), why2)
+     2931: _, why3 = parse_constraint("不存在<=1", ds)
+     2932: ck("未知列要报错", bool(why3), why3[:60])
+     2934: print("\n七、机理：ODE 与量纲分析")
+     2938: ck("ODE 指数增长与解析解一致",
+     2941: f"相对误差 {abs(ro['y_end'] - math.exp(3.5)) / math.exp(3.5):.1e}")
+     2942: ck("ODE 自适应步长步数少", ro["stats"]["steps"] < 100,
+     2943: f"{ro['stats']['steps']} 步")
+     2945: ck("ODE 三角函数可用",
+     2960: ck(f"拒绝危险表达式 {bad[:26]}", blocked)
+     2968: ck(f"放行合法表达式 {good}", passed)
+     2971: rd = dimension_analysis([("周期", "T"), ("长度", "L"),
+     2972: ("重力", "L*T^-2"), ("质量", "M")])
+     2973: ck("单摆 n=4 rank=3 → 1 个 Pi", rd["n_pi"] == 1,
+     2978: ck("Pi 确实无量纲", np.allclose(A @ p, 0, atol=1e-8),
+     2980: ck("Pi 里质量指数为 0（周期与质量无关）",
+     2983: ck("量纲串解析正确", dd == {"L": 1.0, "T": -2.0}, str(dd))
+     2984: ck("空量纲要报错", _raises(lambda: parse_dims("")), "空串")
+     2986: print("\n八、预测（时间序列）")
+     2991: yc = ds.pick(["热阻"])[0]
+     2993: ck("横截面数据被判 questionable",
+     2995: ck("指出样本编号不是时间",
+     2996: any("编号" in w for w in rf.get("warn", [])),
+     2998: ck("给出朴素法基线",
+     2999: any("朴素" in c["name"] for c in rf["cands"]), "对照组不能缺")
+     3011: ck("真时间序列不被判 questionable",
+     3013: ck("学到上升趋势（斜率 0.5）",
+     3015: f"末期 {yy[-1]:.2f} → 预测 {rf2['fut_y'][0]:.2f}")
+     3016: ck("预测区间随步长变宽",
+     3020: ck("预测值与残差同量级（没跑飞）",
+     3025: print("\n九、评价（熵权 + TOPSIS）")
+     3029: cost = ds.pick(["热阻", "压降", "温度"])
+     3031: ck("熵权权重和为 1",
+     3034: ck("三个指标都有正权重",
+     3037: ck("TOPSIS 得分在 [0,1]",
+     3040: ck("排名第一是 #64",
+     3041: int(sc["order"][0]) + 1 == 64, f"第 {int(sc['order'][0]) + 1} 行")
+     3043: i_p = cost.index("无量纲压降")
+     3044: ck("压降（方差最大）权重最高",
+     3046: f"压降 {sc['weights'][i_p]:.4f} vs 最高 "
+     3049: print("\n十、聚类")
+     3058: ck("三簇可分数据找到 3 个簇", rc["k"] == 3, f"k={rc['k']}")
+     3059: ck("可分数据轮廓系数高", rc["silhouette"] > 0.5,
+     3060: f"{rc['silhouette']:.3f}（分离度 {rc['separability']}）")
+     3061: ck("可分数据不报「无结构」", rc["no_structure"] is False,
+     3063: ck("每簇大小接近（90/90/90）",
+     3065: ck("可分数据明显高过零模型",
+     3067: f"实际 {rc['silhouette']:.3f} vs 零模型 {rc['null_silhouette']:.3f}")
+     3075: ck("单个高斯团被判定为无结构", rb["no_structure"] is True,
+     3077: f"零模型={rb['null_silhouette']:.3f} 差={rb['margin']:+.3f}")
+     3083: xs_c = ds.pick(["宽度", "深高", "排数"])
+     3085: ck("离散网格数据被判无自然簇数",
+     3088: ck("簇中心换回原量纲（宽度落在 0~0.3）",
+     3092: print("\n十一、绘图（PIL，环境无 matplotlib）")
+     3099: r1 = plot_scatter(ds, ds.pick(["宽度"])[0], ds.pick(["热阻"])[0],
+     3101: ck("散点图生成", os.path.exists(r1["path"]),
+     3102: f"{os.path.getsize(r1['path'])} 字节")
+     3104: r2 = plot_forecast(ds, ds.pick(["热阻"])[0], 5,
+     3106: ck("预测折线图生成", os.path.exists(r2["path"]),
+     3107: f"{os.path.getsize(r2['path'])} 字节")
+     3108: ck("预测图带上「不可用」警告", r2["questionable"] is True,
+     3111: sc2 = mm.score(ds, [], ds.pick(["热阻", "压降", "温度"]))
+     3113: title="熵权法权重", out=os.path.join(tdir, "b.png"))
+     3114: ck("柱状图生成", os.path.exists(r3["path"]),
+     3115: f"{os.path.getsize(r3['path'])} 字节")
+     3117: pc = ds.pick(["热阻", "压降"])
+     3119: ck("帕累托图生成", os.path.exists(r4["path"]),
+     3120: f"{os.path.getsize(r4['path'])} 字节")
+     3124: ck("帕累托图前沿点数与 mm.pareto_idx 一致",
+     3126: f"图 {r4['front']} vs 计算 {expect_front}")
+     3127: r4b = plot_pareto(ds, ds.pick(["热阻", "压降", "温度"]), True,
+     3129: ck("三目标前沿是 12 个点", r4b["front"] == 12, f"{r4b['front']}")
+     3130: ck("两目标前沿少于三目标（加目标只会更多点被支配）",
+     3135: ck("生成的是真 PNG", magic == b"\x89PNG\r\n\x1a\n", str(magic))
+     3137: ck("找到中文字体（否则中文会是方框）",
+     3138: _font(16).getbbox("测试")[2] > 20,
+     3139: str(_font(16).getbbox("测试")))
+     3141: ck("绘图（无数据则跳过）", True, "跳过")
+     3145: print(f"{'ALL PASS' if n_bad == 0 else 'FAILED'}  {n_ok} 通过 / {n_bad} 失败")
+     3155: description="数学建模插件：算 + 验 + 出报告")
+     3162: help="greyrel 的指标方向，如 1,-1,1（越大越好 / 越小越好）")
+     3164: help="greyrel 的参考序列（留空用理想解）")
+     3166: help="greyrel 的分辨系数，默认 0.5")
+     3169: help="greyrel 的归一化方式")
+     3171: help="fuzzy 的权重，如 0.3,0.3,0.4")
+     3173: help="fuzzy 的隶属度矩阵，行用 ; 隔开")
+     3175: help="fuzzy 的等级分值，如 95,85,75")
+     3178: help="fuzzy 的合成算子")
+     3181: help="graph 的算法")
+     3183: help='边表： "0-1:4,1-2:3"（graph 用）')
+     3185: help='距离矩阵，行用 | 隔开（tsp 用）')
+     3187: help="graph 的起点 / 源点")
+     3189: help="graph 的终点 / 汇点")
+     3191: help="节点数（留空按边里的最大下标推断）")
+     3193: help='两两比较矩阵，行用 | 分隔： "1,3,5|1/3,1,2|1/5,1/2,1"')
+     3194: ap.add_argument("--names", default="", help="AHP 的指标名，逗号分隔")
+     3196: help="grey 的时间序列，逗号分隔： 2.874,3.278,...")
+     3201: help="plot 的图型")
+     3202: ap.add_argument("--out-png", default="", help="图片输出路径")
+     3204: help="cluster 的簇数；0 = 自动选")
+     3207: help="forecast 的预测步数")
+     3208: ap.add_argument("--t", default="", help="forecast 的时间列（留空用行序）")
+     3209: ap.add_argument("--rhs", default="", help="ODE 右端，如 -0.7*y 或 sin(t)")
+     3210: ap.add_argument("--y0", type=float, default=1.0, help="初值 y(t0)")
+     3215: help="dim 的变量，形如 周期=T 或 重力=L*T^-2")
+     3220: ap.add_argument("--obj", default="", help="solve 的目标列（留空用 --y）")
+     3222: help="形如 热阻<=0.74，可重复")
+     3223: ap.add_argument("--maximize", action="store_true", help="solve 求最大")
+     3225: help="名字:正/负，可重复")
+     3226: ap.add_argument("--min", default="", help="越小越好的目标列")
+     3227: ap.add_argument("--max", default="", help="越大越好的目标列")
+     3228: ap.add_argument("--benefit", default="", help="评价题的效益型指标")
+     3229: ap.add_argument("--cost", default="", help="评价题的成本型指标")
+     3232: help="声明已跨环境重跑（e3 才能到 2）")
+     3234: help="干净 CSV 的输出路径，默认 out/clean.csv")
+     3236: help="列名映射 CSV 的输出路径（可选）")
+     3238: help="视频输出路径，默认 out/fig/flow.gif")
+     3240: help="每帧停留毫秒数")
+     3242: help="流程图节点，用 | 隔开（flow 图用）")
+     3244: help="同时生成英文 LaTeX 论文，例如 paper.tex")
+     3246: help="队号，写进论文页眉，不写姓名学校")
+     3248: help="题目的一句话描述，写进摘要")
+     3249: ap.add_argument("--out", default="", help="把报告写成 markdown 文件")
+     3259: print(f"找不到数据：{path!r}")
+     3262: print("solve 需要 --x 和 --obj（或 --y）")
+     3269: print(f"约束优化 · 数据 {os.path.basename(path)}（{ds.n_rows} 行）")
+     3271: print(f"  自变量 {xs}")
+     3272: print(f"  目标   {obj}（{'最小化' if not a.maximize else '最大化'}）")
+     3274: print(f"  约束   {a.constraint}")
+     3287: print(f"找不到数据：{path!r}")
+     3290: print("race 需要 --y 和 --x")
+     3301: print(f"数据 {os.path.basename(path)}（{ds.n_rows} 行）")
+     3308: print("ode 需要 --rhs，例如 --rhs \"-0.7*y\"")
+     3313: print(f"表达式有问题：{e}")
+     3326: print("dim 需要至少一个 --var，例如 --var 周期=T --var 重力=L*T^-2")
+     3331: bad.append(f"{raw!r}（要写成 名字=量纲）")
+     3341: print("解析不了：")
+     3359: print(f"找不到数据：{path!r}")
+     3362: print("forecast 需要 --y")
+     3370: print(f"做不了：{r.get('why')}")
+     3376: print(f"数据 {os.path.basename(path)}（{ds.n_rows} 行）")
+     3384: print(f"找不到数据：{path!r}")
+     3387: print("cluster 需要 --x（要聚类的特征列）")
+     3394: print(f"做不了：{r.get('why')}")
+     3400: print(f"数据 {os.path.basename(path)}（{ds.n_rows} 行）")
+     3408: print(f"找不到数据：{path!r}")
+     3416: print("scatter 需要 --x 与 --y")
+     3423: print("forecast 图需要 --y")
+     3431: print("hist 需要 --y")
+     3436: print("resid 需要 --y 与 --x")
+     3442: print("qq 需要 --y 与 --x")
+     3451: print("pred 需要 --y 与 --x")
+     3460: print("bar 需要 --cost（要画权重的指标列）")
+     3464: title="熵权法权重", ylabel="权重", out=out)
+     3468: print("sens 需要 --y（要观察的目标列）")
+     3475: print("sens 需要 --cost（要扰动的因子列）")
+     3497: print("pareto 需要至少两个 --min 目标列")
+     3501: print(f"未知图类型 {a.kind!r}")
+     3504: print(f"没画出来：{(r or {}).get('why', '未知原因')}")
+     3506: print(f"  图已保存 {r['path']}"
+     3507: f"（{os.path.getsize(r['path'])} 字节）")
+     3512: print("  ⚠ 这张图对应的预测不可用（见 forecast 的警告）")
+     3517: print("ahp 需要 --ahp，行用 | 分隔、元素用 , 分隔")
+     3518: print('  例：--ahp "1,3,5|1/3,1,2|1/5,1/2,1"')
+     3532: print(f"矩阵解析失败：{e}")
+     3535: print(f"矩阵不是方阵：各行长度 {[len(r) for r in rows]}")
+     3542: print(f"AHP 算不了：{e}")
+     3562: print(f"序列解析失败：{e}")
+     3567: print("grey 需要 --series 或可用的数据文件")
+     3570: print("用数据文件时 grey 需要 --y")
+     3577: print(f"做不了：{r.get('why')}")
+     3596: print("tsp 需要 --matrix，行用 | 或 ; 隔开")
+     3606: print(f"输入解析失败：{e}")
+     3612: print("dijkstra 需要 --from")
+     3623: print("flow 需要 --from 与 --to")
+     3631: print(f"算不了：{e}")
+     3654: print("greyrel 需要 --matrix（行用 ; 或 | 隔开）")
+     3661: print(f"输入解析失败：{e}")
+     3667: print(f"算不了：{e}")
+     3685: print("fuzzy 需要 --membership（行用 ; 或 | 隔开）")
+     3690: print(f"隶属度矩阵解析失败：{e}")
+     3699: print("AHP 矩阵没通过一致性检验（CR≥0.1），"
+     3700: "先修矩阵再来定权重")
+     3703: print(f"  权重来自 AHP（CR={ahp_r['CR']:.4f} 通过）")
+     3705: print("fuzzy 需要 --weights 或 --ahp")
+     3709: print(f"输入解析失败：{e}")
+     3714: print(f"算不了：{e}")
+     3730: print(f"找不到数据：{path!r}")
+     3735: print("video 需要 --y 与 --x")
+     3767: note=(ds.drop_note() or "没有丢弃行") + "；"
+     3770: note=f"{len(eda['per_col'])} 个数值变量的分布；"
+     3771: f"箱线图看中位数与离群点，不被极端值带偏"),
+     3773: note=f"目标 {mm.__dict__.get('_', '')} 均值 "
+     3775: f"标准差 {float(ds.col(ycol).std(ddof=1)):.4g}"),
+     3777: note="相关系数接近 ±1 的变量对，其各自效应加性模型分不开"),
+     3782: note=f"{len(fitr.get('cands') or [])} 个候选结构，"
+     3783: f"多折交叉验证比 RMSE"),
+     3789: f"（图内标注的是 in-sample RMSE，与 CV 值不同）")
+     3794: f"（5% 临界 {rb['bp_crit']:.2f}）"
+     3795: + ("，有异方差" if rb["bp"] > rb["bp_crit"]
+     3796: else "，同方差")),
+     3798: note="Q-Q 图看残差是否近似正态 —— t 检验成立的前提"),
+     3802: note=("结论随尺度改变的是："
+     3804: + "，这些不能单独当结论")
+     3806: "全部变量在 log/sqrt 尺度下符号与显著性一致"),
+     3808: note="每个因子 ±1 标准差扰动，看目标响应变化幅度"),
+     3810: note="从原始数据到结论的完整链路；每一步都留机器可读记录"),
+     3813: print(f"  ⚠ 缺 {len(missing)} 张图，对应帧将只有文字："
+     3815: print(f"    先用 mmkit plot --kind <类型> 生成到 {outdir}")
+     3820: print(f"  做不了：{r.get('why')}")
+     3822: print(f"  GIF 已保存 {r['path']}"
+     3823: f"（{r['frames']} 帧，{r['bytes']} 字节）")
+     3827: print(f"  MP4 已保存 {mp4['path']}"
+     3828: f"（{mp4['frames']} 帧，{mp4['bytes']} 字节）")
+     3830: print(f"  MP4 跳过：{mp4.get('why')}")
+     3836: print(f"找不到数据：{path!r}")
+     3853: print("  ⚠ 日期列不可信：")
+     3870: print(f"  ✗ 导出失败：解析出 0 行可用数据 / 0 个数值列。")
+     3871: print(f"    写出的 {out_csv} 是空的，不要拿它继续分析。")
+     3872: print(f"    常见原因：所有列都被判成非数值（文本列 / 日期列），")
+     3873: print(f"    或数值列缺失率都超过 60%。")
+     3876: print(f"    已删除空文件 {out_csv}")
+     3880: print(f"  干净 CSV 已写入 {out_csv}"
+     3881: f"（{ds.n_rows} 行 × {len(ds.num_names)} 列）")
+     3883: print(f"  ⚠ 有 {ds.dropped} 行因为缺值没有进入这份 CSV —— "
+     3884: f"建模用的就是这里的 {ds.n_rows} 行")
+     3893: print(f"  列名映射已写入 {a.names_out}")
+     3902: print(f"{root!r} 下没找到可读的数据文件")
+     3903: print(f"  支持: {', '.join(_ms.SUPPORTED)}")
+     3905: print(f"  找到 {len(srcs)} 个源:")
+     3909: print(f"    … 另有 {len(srcs) - 12} 个")
+     3916: print(f"  列并集 {m['n_cols']} 列（若各文件列名不一致，"
+     3917: f"并集会大于单个文件的列数）")
+     3927: print(f"  已写入 {out_csv}"
+     3928: f"（{m['n_rows']} 行 × {m['n_cols']} 列）")
+     3929: print(f"  下一步：mmkit.py run --data {out_csv} --y <目标> --x <因子>")
+     3937: print(f"找不到数据：{path!r}")
+     3947: KIND_CN = {"forecast": "时间序列预测", "explain": "关系与解释",
+     3948: "evaluate": "综合评价", "optimize": "优化与决策",
+     3949: "unclear": "信息不足，定不了题"}
+     3952: print(f"定题结果：**{KIND_CN.get(r['kind'], r['kind'])}**")
+     3954: print("  判断依据（每条都可复核）：")
+     3958: print("  推荐方法链：")
+     3963: print("  ⚠ 风险：")
+     3967: print("  边界：这是**依据数据结构的建议**，不是对题意的理解。")
+     3968: print("        题意（要做几问、每问要什么）只有你能给。")
+     3974: print("找不到数据")
+     3979: print("hints 需要 --y 和 --x")
+     3986: f"α=0.05 显著临界 |r| ≈ {hs[0]['r_crit']:.4f}   "
+     3987: f"（样本越大临界越低，但显著 ≠ 重要）")
+     3991: d = {1: "正", -1: "负", 0: "—"}[h["sign"]]
+     3992: print(f"{h['name']:<24} 偏相关 {pcs:>8}  {d:<2}  {h['note']}")
+
+  合计 543 处会进图的文字含中文

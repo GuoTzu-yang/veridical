@@ -1,0 +1,9 @@
+{"id": "m1-2fa136f47793", "ts": "2026-11-06T03:43:39+08:00", "verdict": "degrade", "task": "case_train T1 部署UUID", "note": "", "success": true, "evidence": "2026-11-06 提测 30.000"}
+{"id": "m1-a739d613bee8", "ts": "2026-11-06T03:43:39+08:00", "verdict": "degrade", "task": "case_train T2 Fork", "note": "", "success": true, "evidence": "2026-11-06 提测 30.000"}
+{"id": "m1-1eddea6c6899", "ts": "2026-11-06T03:43:39+08:00", "verdict": "degrade", "task": "case_train T3 PR", "note": "", "success": true, "evidence": "2026-11-06 提测 30.000"}
+{"id": "m1-19ac8620218a", "ts": "2026-11-06T03:43:39+08:00", "verdict": "degrade", "task": "calib S1 真UUID", "note": "", "success": true, "evidence": "calibrate_procedure.py"}
+{"id": "m1-710eb8e6e70e", "ts": "2026-11-06T03:43:39+08:00", "verdict": "reject", "task": "calib S2 伪UUID", "note": "", "success": false, "evidence": "calibrate_procedure.py"}
+{"id": "m1-0e05c76ec096", "ts": "2026-11-06T03:43:39+08:00", "verdict": "reject", "task": "calib S3 格式错", "note": "", "success": false, "evidence": "calibrate_procedure.py"}
+{"id": "m1-86765a9a1e07", "ts": "2026-11-06T03:43:39+08:00", "verdict": "reject", "task": "calib S4 空值", "note": "", "success": false, "evidence": "calibrate_procedure.py"}
+{"id": "m1-c4a329c3c30d", "ts": "2026-11-06T03:43:39+08:00", "verdict": "reject", "task": "calib S5 已认领", "note": "", "success": false, "evidence": "calibrate_procedure.py"}
+{"id": "m1-9b3a9e9670e4", "ts": "2026-11-06T03:43:39+08:00", "op": "resolve", "success": true, "evidence": "演示回填"}

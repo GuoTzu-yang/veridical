@@ -1,0 +1,364 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+falsify.py —— 主动证伪（P07，第 9 轮）
+
+为什么需要它
+------------
+lanes.py 的 7 条通道验的是「整体符号对不对」：偏相关 +0.64 说应为负，
+于是判方向错误。这是统计层面。
+
+但还有一类错它抓不到：**结论在局部不成立**。
+    「宽度比每增加 0.1，热阻下降 5%」——全局偏相关确实是负的，
+    但可能在某两个宽度之间热阻反而上升（噪声、或真实非单调）。
+    这种结论写进论文，被评委挑一个点就崩。
+
+所以这里补三件事：
+    1. 逐点反例搜索（counterexamples）—— 找违反结论的数据点
+    2. 极限行为（limit_behavior）—— 把输入推到边界外，看预测是否荒谬
+    3. 量纲一致性（dimension_check）—— 等式两边量纲必须相同
+
+Lean 的做法是「你写不出反例才算对」。数模没法形式化证明，
+但可以退一步：**主动搜反例，搜不到才有资格说这结论稳**。
+
+用法
+    python falsify.py selftest
+    python falsify.py counter --data X.xlsx --y 热阻 --x 宽度 --sign -1
+"""
+
+from __future__ import annotations
+
+import math
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  ① 逐点反例搜索
+# ══════════════════════════════════════════════════════════════════════
+def counterexamples(xs, ys, sign: int, min_seg: int = 8) -> dict:
+    """找违反「x 增 → y 按 sign 变」的局部区段。
+
+    sign=+1 表示「x 增 y 也增」，-1 表示「x 增 y 降」。
+
+    做法：按 x 排序后滑动窗口，窗口内算 x 和 y 的秩相关。
+    与主张符号相反、且样本量够的窗口，就是一个反例区段。
+
+    为什么用秩相关而不是线性斜率：局部可能非线性，
+    秩相关只问「同增还是反向」，不假设直线。
+    """
+    pairs = [(float(a), float(b)) for a, b in zip(xs, ys)
+             if a is not None and b is not None
+             and not (isinstance(a, float) and math.isnan(a))
+             and not (isinstance(b, float) and math.isnan(b))]
+    if len(pairs) < min_seg * 2:
+        return dict(ok=False, why=f"样本不足（{len(pairs)} < {min_seg * 2}）",
+                    n=len(pairs), segments=[], n_violating=0)
+    pairs.sort(key=lambda p: p[0])
+
+    segments = []
+    for i in range(0, len(pairs) - min_seg + 1):
+        seg = pairs[i:i + min_seg]
+        rho = _spearman([p[0] for p in seg], [p[1] for p in seg])
+        if rho is None:
+            continue
+        # 与主张符号相反 = 反例
+        if rho * sign < 0:
+            segments.append(dict(
+                start=round(seg[0][0], 6), end=round(seg[-1][0], 6),
+                rho=round(rho, 4), i0=i, i1=i + min_seg - 1))
+
+    # 合并重叠区段，只报最长的几段
+    merged = _merge(segments)
+    return dict(ok=not merged, n=len(pairs),
+                n_violating=len(merged),
+                segments=merged[:6],
+                # 这条必须写出来：本搜索是**边际**的，没控制其他变量。
+                # 边际反例可能是混淆造成的，不是真的非单调。
+                marginal=True,
+                caution=("本搜索未控制其他变量。边际反例可能来自未控制的"
+                         "第三变量；要与偏相关符号一起看，两者都矛盾才算"
+                         "真的非单调"),
+                why=("没有局部反例" if not merged
+                     else f"发现 {len(merged)} 段局部违反（边际，未控制）"))
+
+
+def _spearman(a, b):
+    """秩相关。ties 用平均秩。"""
+    n = len(a)
+    if n < 3:
+        return None
+    ra, rb = _rank(a), _rank(b)
+    ma, mb = sum(ra) / n, sum(rb) / n
+    num = sum((x - ma) * (y - mb) for x, y in zip(ra, rb))
+    da = math.sqrt(sum((x - ma) ** 2 for x in ra))
+    db = math.sqrt(sum((y - mb) ** 2 for y in rb))
+    if da == 0 or db == 0:
+        return None
+    return num / (da * db)
+
+
+def _rank(v):
+    order = sorted(range(len(v)), key=lambda i: v[i])
+    r = [0.0] * len(v)
+    i = 0
+    while i < len(order):
+        j = i
+        while j + 1 < len(order) and v[order[j + 1]] == v[order[i]]:
+            j += 1
+        avg = (i + j) / 2.0 + 1
+        for k in range(i, j + 1):
+            r[order[k]] = avg
+        i = j + 1
+    return r
+
+
+def _merge(segs):
+    if not segs:
+        return []
+    segs.sort(key=lambda s: s["i0"])
+    out = [dict(segs[0])]
+    for s in segs[1:]:
+        if s["i0"] <= out[-1]["i1"]:
+            out[-1]["i1"] = max(out[-1]["i1"], s["i1"])
+            out[-1]["end"] = s["end"]
+            # 保留更强的（|rho| 更大）
+            if abs(s["rho"]) > abs(out[-1]["rho"]):
+                out[-1]["rho"] = s["rho"]
+        else:
+            out.append(dict(s))
+    # 按跨度排序，报最长的
+    out.sort(key=lambda s: s["i1"] - s["i0"], reverse=True)
+    return out
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  ② 极限行为
+# ══════════════════════════════════════════════════════════════════════
+def limit_behavior(coef, intercept, xmean, xstd, xs_min, xs_max,
+                   y_bounds=None, n_extrap: int = 5) -> dict:
+    """把输入推到观测范围外，看线性预测是否给出荒谬值。
+
+    线性模型在样本区间外必然线性外推。如果推出去的值物理上不可能
+    （负的热阻、负的浓度、超过 100% 的占比），那说明这个模型
+    只在其定义域内有效，论文里必须声明边界。
+
+    y_bounds: (lo, hi) 物理可行范围；None 表示不检查越界，只看翻转。
+    """
+    issues = []
+    step = (xs_max - xs_min) / max(1, n_extrap)
+    grid = [xs_min - step * k for k in (3, 2, 1)] + \
+           [xs_max + step * k for k in (1, 2, 3)]
+    preds = []
+    for x in grid:
+        yhat = intercept + coef * (x - xmean) / (xstd or 1.0) * xstd
+        preds.append(dict(x=round(x, 6), yhat=round(yhat, 6)))
+
+    if y_bounds:
+        lo, hi = y_bounds
+        for p in preds:
+            if p["yhat"] < lo or p["yhat"] > hi:
+                issues.append(
+                    f"外推到 x={p['x']} 时预测 {p['yhat']} 超出物理可行范围 "
+                    f"[{lo}, {hi}]，该模型不可外推")
+
+    return dict(ok=not issues, extrapolation=preds,
+                issues=issues,
+                note=("观测区间 [" + str(round(xs_min, 6)) + ", "
+                      + str(round(xs_max, 6)) + "]，区间外为外推"))
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  ③ 量纲一致性
+# ══════════════════════════════════════════════════════════════════════
+# 常见量的量纲（用 SI 基本量指数 [L, M, T, Θ]）
+DIMS = {
+    "length": (1, 0, 0, 0),
+    "mass": (0, 1, 0, 0),
+    "time": (0, 0, 1, 0),
+    "temperature": (0, 0, 0, 1),
+    "velocity": (1, 0, -1, 0),
+    "acceleration": (1, 0, -2, 0),
+    "force": (1, 1, -2, 0),
+    "pressure": (-1, 1, -2, 0),
+    "energy": (2, 1, -2, 0),
+    "power": (2, 1, -3, 0),
+    "density": (-3, 1, 0, 0),
+    "thermal_conductivity": (1, 1, -3, -1),
+    "heat_transfer_coef": (0, 1, -3, -1),
+    "thermal_resistance": (-2, -1, 3, 1),
+    "kinematic_viscosity": (2, 0, -1, 0),
+    "dynamic_viscosity": (-1, 1, -1, 0),
+    "dimensionless": (0, 0, 0, 0),
+}
+
+
+def dim_of(name: str):
+    return DIMS.get(str(name).strip().lower())
+
+
+def dimension_check(lhs: str, rhs_terms) -> dict:
+    """检查等式两边量纲是否一致。
+
+    rhs_terms: [(符号名, 指数)]，例如 [("pressure", -1), ("velocity", 2)]
+    返回 issues；空表示一致。
+    """
+    L = dim_of(lhs)
+    if L is None:
+        return dict(ok=None, issues=[f"未知量纲：{lhs}"], lhs=None, rhs=None)
+    acc = [0, 0, 0, 0]
+    unknown = []
+    for nm, e in rhs_terms:
+        d = dim_of(nm)
+        if d is None:
+            unknown.append(nm)
+            continue
+        for k in range(4):
+            acc[k] += d[k] * e
+    if unknown:
+        return dict(ok=None, issues=[f"右侧含未知量纲：{unknown}"],
+                    lhs=L, rhs=tuple(acc))
+    ok = tuple(acc) == tuple(L)
+    return dict(ok=ok, lhs=L, rhs=tuple(acc),
+                issues=[] if ok else
+                [f"量纲不一致：左边 {lhs}{L}，右边 {tuple(acc)}"])
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  自测
+# ══════════════════════════════════════════════════════════════════════
+def selftest() -> int:
+    bad = 0
+    n = 0
+
+    def ck(name, cond, detail=""):
+        nonlocal bad, n
+        n += 1
+        print(f"  [{'PASS' if cond else 'FAIL'}] {name}"
+              + (f"  — {detail}" if detail else ""))
+        if not cond:
+            bad += 1
+
+    # ── 反例搜索 ──
+    # 单调下降：不该报反例
+    xs = list(range(40))
+    ys = [100 - 2 * x for x in xs]
+    r = counterexamples(xs, ys, sign=-1)
+    ck("单调序列无局部反例", r["ok"], f"{r['n_violating']} 段")
+
+    # 中间有个平台/上翘：应报反例
+    ys2 = [100 - 2 * x if x < 15 else (70 + (x - 15) * 2) for x in xs]
+    r2 = counterexamples(xs, ys2, sign=-1)
+    ck("上翘段被抓出", not r2["ok"], f"{r2['n_violating']} 段")
+    ck("反例区段带起止值", bool(r2["segments"])
+       and "start" in r2["segments"][0],
+       str(r2["segments"][0])[:60] if r2["segments"] else "")
+
+    # 样本太少不硬判
+    r3 = counterexamples([1, 2, 3], [3, 2, 1], sign=-1)
+    ck("样本不足时返回 ok=False 但不报反例",
+       r3["ok"] is False and r3["n_violating"] == 0, r3["why"][:40])
+
+    # ── 极限行为 ──
+    # 热阻随宽度下降，外推到很宽 → 可能为负
+    lb = limit_behavior(coef=-2.0, intercept=0.75, xmean=0.5, xstd=0.1,
+                        xs_min=0.2, xs_max=0.9, y_bounds=(0.0, 10.0))
+    neg = [p for p in lb["extrapolation"] if p["yhat"] < 0]
+    ck("外推出负热阻被抓出", bool(neg) and not lb["ok"],
+       f"{len(neg)} 个越界点" if neg else "没抓到")
+
+    # 不设物理边界 → 不报越界
+    lb2 = limit_behavior(coef=-0.5, intercept=0.75, xmean=0.5, xstd=0.1,
+                         xs_min=0.2, xs_max=0.9, y_bounds=None)
+    ck("不设边界时不误报", lb2["ok"])
+    ck("外推网格给出 6 个点", len(lb["extrapolation"]) == 6,
+       f"{len(lb['extrapolation'])}")
+
+    # ── 量纲 ──
+    # 粘性压力尺度 = 动力粘度 × 速度 / 长度  → 应为压力
+    # （mu*v/L^2 是压力梯度 dP/dx，不是压力，量纲差一个 L）
+    d = dimension_check("pressure",
+                        [("dynamic_viscosity", 1), ("velocity", 1),
+                         ("length", -1)])
+    ck("压力梯度量纲一致", d["ok"] is True, str(d["rhs"]))
+
+    # 故意的错：压力 = 速度
+    d2 = dimension_check("pressure", [("velocity", 1)])
+    ck("错误量纲被抓出", d2["ok"] is False, d2["issues"][0][:50])
+
+    # 无量纲数
+    d3 = dimension_check("dimensionless", [("dimensionless", 1)])
+    ck("无量纲数自身一致", d3["ok"] is True)
+
+    # 未知量纲不硬判
+    d4 = dimension_check("pressure", [("神秘量", 1)])
+    ck("未知量纲返回 ok=None", d4["ok"] is None, str(d4["issues"])[:50])
+
+    print(f"\n{'ALL PASS' if bad == 0 else 'FAILED'}  {n - bad}/{n}")
+    return 0 if bad == 0 else 1
+
+
+def main(argv=None) -> int:
+    import argparse
+    ap = argparse.ArgumentParser(description="主动证伪")
+    ap.add_argument("cmd", nargs="?", default="selftest",
+                    choices=["selftest", "counter"])
+    ap.add_argument("--data", default="")
+    ap.add_argument("--y", default="")
+    ap.add_argument("--x", default="")
+    ap.add_argument("--sign", type=int, default=-1,
+                    help="主张符号：+1 同增，-1 反向")
+    a = ap.parse_args(argv)
+
+    if a.cmd == "selftest":
+        return selftest()
+
+    if not (a.data and a.y and a.x):
+        print("  需要 --data --y --x")
+        return 2
+    import mm
+    ds = mm.DS(a.data)
+    r = counterexamples(ds.col(a.x), ds.col(a.y), sign=a.sign)
+    print(f"  反例搜索：{a.x} → {a.y}（主张符号 {a.sign:+d}）")
+    print(f"  样本 {r['n']}，违反区段 {r['n_violating']} 段")
+    for s in r["segments"]:
+        print(f"    x∈[{s['start']}, {s['end']}]  rho={s['rho']:+.3f}")
+
+    # 边际反例必须和条件符号一起看 —— 否则会把混淆当成非单调
+    try:
+        others = [c for c in ds.num_names
+                  if c not in (a.x, a.y) and "编号" not in c][:4]
+        pcs = []
+        for o in others:
+            pc = mm.partial_corr(ds, a.y, a.x, [o])
+            # partial_corr 可能返回 dict，也可能是带属性的对象；
+            # 只写 pc.get(...) 会 AttributeError，整段对照静默失效。
+            _r = (pc.get("r") if isinstance(pc, dict)
+                  else getattr(pc, "r", None))
+            if _r is not None:
+                pcs.append((o, _r))
+        if pcs:
+            print(f"\n  控制单个变量后的偏相关符号（用于对照）：")
+            for o, rr in pcs:
+                agree = (rr * a.sign > 0)
+                print(f"    控制 {o[:14]:<16} r={rr:+.3f}  "
+                      f"{'与主张一致' if agree else '与主张相反'}")
+            same = all(rr * a.sign > 0 for _, rr in pcs)
+            if not r["ok"] and same:
+                print("\n  ⚠ 边际有反例，但控制后符号一致 —— "
+                      "反例很可能来自未控制的第三变量，不是真非单调")
+            elif not r["ok"] and not same:
+                print("\n  ✗ 边际反例 + 条件符号相反 —— 这个结论不成立")
+    except Exception as e:                          # noqa: BLE001
+        print(f"  （偏相关对照失败：{type(e).__name__}）")
+
+    if r["ok"]:
+        print("  没有找到局部反例 —— 这个结论在观测范围内站得住")
+    return 0 if r["ok"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

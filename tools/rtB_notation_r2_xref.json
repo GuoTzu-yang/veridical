@@ -1,0 +1,46 @@
+{
+ "rows": [
+  {
+   "line": 264,
+   "sym": "N",
+   "meaning": "numeric tokens in a report",
+   "notes": "after LaTeX noise removal"
+  },
+  {
+   "line": 265,
+   "sym": "T",
+   "meaning": "token classes",
+   "notes": "structural, configuration, temporal, computed"
+  },
+  {
+   "line": 266,
+   "sym": "\\tau",
+   "meaning": "tracing rate",
+   "notes": "traced tokens / $N$, reported per scope"
+  },
+  {
+   "line": 267,
+   "sym": "c",
+   "meaning": "a claim under test",
+   "notes": "predictor, sign, conditioning set"
+  },
+  {
+   "line": 268,
+   "sym": "W",
+   "meaning": "window length",
+   "notes": "rows per sub-range in the counterexample search"
+  },
+  {
+   "line": 269,
+   "sym": "\\alpha",
+   "meaning": "significance level",
+   "notes": "0.05, declared once, class B"
+  },
+  {
+   "line": 272,
+   "sym": "D",
+   "meaning": "report digest",
+   "notes": "sha256 over the report source and PDF"
+  }
+ ]
+}

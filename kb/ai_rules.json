@@ -1,0 +1,474 @@
+{
+ "version": 1,
+ "source": "dsh-plugin-writing-guard 2.0.1 lib/rules.js",
+ "note": "按 category 分组；maxHits 是原作者设的上报上限。",
+ "rules": [
+  {
+   "id": "revised-family",
+   "category": "process_residue",
+   "severity": "high",
+   "label": "正文出现 ",
+   "regex": "\\brevis(ed|ion|ions)?\\b(?! (Cardiac Risk Index|simplex method|simplex algorithm|simplex))",
+   "maxHits": 5,
+   "profiles": "manuscript, cover_letter, unknown",
+   "languages": "en"
+  },
+  {
+   "id": "as-requested",
+   "category": "process_residue",
+   "severity": "high",
+   "label": "审稿回应用语残留",
+   "regex": "\\b(as requested|as suggested( by|,)|in response to (the )?(reviewer|comment|suggestion|concern)|to address (the |this |these |reviewer )?(concern|comment|issue|question|suggestion))\\b",
+   "maxHits": 3,
+   "profiles": "manuscript, cover_letter, unknown",
+   "languages": "en"
+  },
+  {
+   "id": "we-have-changed",
+   "category": "process_residue",
+   "severity": "high",
+   "label": "we-have-changed",
+   "regex": "\\bwe (?:have |now |also ){0,3}(?:updated|modified|corrected|clarified|expanded|rewritten|replaced|revised)\\b",
+   "maxHits": 3,
+   "profiles": "manuscript, unknown",
+   "languages": "en"
+  },
+  {
+   "id": "previous-version",
+   "category": "process_residue",
+   "severity": "medium",
+   "label": "提及旧版本/原稿",
+   "regex": "\\b(the |our |in the )(previous|original|earlier|first|old) (version|manuscript|draft|submission|model|analysis)\\b",
+   "maxHits": 3,
+   "profiles": "manuscript, unknown",
+   "languages": "en"
+  },
+  {
+   "id": "cn-revision-process",
+   "category": "process_residue",
+   "severity": "high",
+   "label": "中文修改过程残留",
+   "regex": "(本轮|本次修改|修改稿中|投稿前|待补齐|需作者|请作者|审稿人要求|根据审稿|修订稿|返修稿|初稿中|上一版|原稿中|我们修改了|我们补充了|我们更新了|已按要求)",
+   "maxHits": 4,
+   "profiles": "manuscript, unknown",
+   "languages": "zh"
+  },
+  {
+   "id": "defensive-purpose-en",
+   "category": "claim_calibration",
+   "severity": "high",
+   "label": "Defensive-purpose framing",
+   "regex": "\\b(?:to|in order to)\\s+(?:avoid|prevent|preclude|address|allay|minimi[sz]e)\\s+(?:potential\\s+)?(?:concerns?|criticism|misunderstandings?|confusion|questions?|doubts?|objections?|data leakage|information leakage)\\b",
+   "maxHits": 4,
+   "profiles": "manuscript, unknown",
+   "languages": "en"
+  },
+  {
+   "id": "defensive-purpose-zh",
+   "category": "claim_calibration",
+   "severity": "high",
+   "label": "Defensive-purpose framing (ZH)",
+   "regex": "(?:为了?|以)(?:避免|防止|消除|回应|打消)(?:潜在)?(?:质疑|误解|忧虑|担忧|争议|数据泄漏|信息泄漏)",
+   "maxHits": 4,
+   "profiles": "manuscript, unknown",
+   "languages": "zh"
+  },
+  {
+   "id": "semantic-closure-marker-en",
+   "category": "academic_style",
+   "severity": "low",
+   "label": "Possible semantic-closure sentence",
+   "regex": "\\b(?:in other words|put differently|to put it another way|simply put|this means that|taken together|these findings (?:highlight|underscore)|this finding (?:highlights|underscores))\\b",
+   "maxHits": 5,
+   "profiles": "manuscript, unknown",
+   "languages": "en"
+  },
+  {
+   "id": "semantic-closure-marker-zh",
+   "category": "academic_style",
+   "severity": "low",
+   "label": "Possible semantic-closure sentence (ZH)",
+   "regex": "(?:换言之|也就是说|换句话说|这意味着|由此可见|这进一步说明|综上)",
+   "maxHits": 5,
+   "profiles": "manuscript, unknown",
+   "languages": "zh"
+  },
+  {
+   "id": "content-free-evaluation-en",
+   "category": "academic_style",
+   "severity": "low",
+   "label": "Content-free evaluation",
+   "regex": "\\b(?:(?:this|the) (?:finding|result|observation) (?:is (?:important|significant|noteworthy|meaningful|clinically relevant)|has important implications)|these (?:findings|results|observations) (?:are (?:important|significant|noteworthy|meaningful|clinically relevant)|have important implications)|this is an? (?:important|significant|noteworthy|meaningful|clinically relevant) (?:finding|result|observation)|these are (?:important|significant|noteworthy|meaningful|clinically relevant) (?:findings|results|observations))\\b",
+   "maxHits": 4,
+   "profiles": "manuscript, unknown",
+   "languages": "en"
+  },
+  {
+   "id": "content-free-evaluation-zh",
+   "category": "academic_style",
+   "severity": "low",
+   "label": "Content-free evaluation (ZH)",
+   "regex": "(?:这|该)(?:一)?(?:发现|结果|观察)(?:具有|有)(?:重要|显著|值得注意|重大)(?:意义|价值|启示)",
+   "maxHits": 4,
+   "profiles": "manuscript, unknown",
+   "languages": "zh"
+  },
+  {
+   "id": "we-do-not-claim",
+   "category": "claim_calibration",
+   "severity": "high",
+   "label": "we-do-not-claim",
+   "regex": "\\bwe (do not|don'?t|make no|cannot|can'?t) (claim|intend to|attempt to|argue|prove|demonstrate)\\b",
+   "maxHits": 3,
+   "profiles": "manuscript, unknown",
+   "languages": "en"
+  },
+  {
+   "id": "cn-defensive-claim",
+   "category": "claim_calibration",
+   "severity": "high",
+   "label": "中文防御性声明",
+   "regex": "(我们并不声称|我们不声称|我们并非要证明|本文并非要证明|本文不宣称|我们无意|这并不意味着|这并不代表|必须承认的是|诚然，|无可否认)",
+   "maxHits": 4,
+   "profiles": "manuscript, unknown",
+   "languages": "zh"
+  },
+  {
+   "id": "self-deprecation",
+   "category": "claim_calibration",
+   "severity": "medium",
+   "label": "自我削弱词",
+   "regex": "(遗憾的[是地]|仍明显落后|效果有限|存在严重不足|仅能初步|只能算|不敢说|远远不够|非常有限|尚显不足)",
+   "maxHits": 3,
+   "profiles": "manuscript, unknown",
+   "languages": "zh"
+  },
+  {
+   "id": "it-should-be-noted",
+   "category": "claim_calibration",
+   "severity": "low",
+   "label": "元评论开场白",
+   "regex": "\\b(it (should|must) be (noted|mentioned|pointed out|stressed|emphasized)|it is (worth|important|necessary|essential) (noting|to note|to mention)|we (would )?like to (note|point out|emphasize|stress|mention|highlight))\\b",
+   "maxHits": 3,
+   "profiles": "manuscript, unknown",
+   "languages": "en"
+  },
+  {
+   "id": "limitations-across-sections",
+   "category": "claim_calibration",
+   "severity": "low",
+   "label": "局限性表述跨章节分散",
+   "regex": "(limitation|局限|不足|cannot be (generalized|extended)|not be applied)",
+   "maxHits": 3,
+   "profiles": "",
+   "languages": "zh, en",
+   "threshold_note": "1 处不算分散；3 处以上才提示。"
+  },
+  {
+   "id": "not-x-but-y-zh",
+   "category": "rhetorical_pattern",
+   "severity": "medium",
+   "label": "“不是X而是Y”对仗句式（中文）",
+   "regex": "(真正重要的从来不是|并非[^，。；]{2,30}，而是|不是[^，。；]{2,30}，而是)",
+   "maxHits": 4,
+   "profiles": "",
+   "languages": "zh"
+  },
+  {
+   "id": "not-x-but-y-en",
+   "category": "rhetorical_pattern",
+   "severity": "low",
+   "label": "“not X but Y”对仗句式（英文）",
+   "regex": "\\bnot (just |only |merely |simply )?[a-z][^.!?]{3,60}? but (?!also )[a-z][^.!?]{2,60}\\b",
+   "maxHits": 3,
+   "profiles": "",
+   "languages": "en"
+  },
+  {
+   "id": "rather-than-heavy",
+   "category": "rhetorical_pattern",
+   "severity": "medium",
+   "label": "“rather than”过度使用",
+   "regex": "\\brather than\\b",
+   "maxHits": 30,
+   "profiles": "",
+   "languages": "en",
+   "threshold_note": "每千词 8.5 次；正常 2-4 次。30 对应约 4/千词。"
+  },
+  {
+   "id": "absolutist-def",
+   "category": "rhetorical_pattern",
+   "severity": "medium",
+   "label": "绝对化定义句式（中文）",
+   "regex": "(其核心在于|其本质在于|其基础在于|其关键在于|唯[^，。；]{0,20}才|[^，。；]{0,15}的核心[^，。；]{0,10}是)",
+   "maxHits": 3,
+   "profiles": "",
+   "languages": "zh"
+  },
+  {
+   "id": "rule-of-three",
+   "category": "rhetorical_pattern",
+   "severity": "low",
+   "label": "三连排比（rule of three）",
+   "regex": "\\b[a-z]{3,}, [a-z]{3,}, and [a-z]{3,}\\b",
+   "maxHits": 99,
+   "profiles": "",
+   "languages": "en"
+  },
+  {
+   "id": "llm-verb-noun-overuse",
+   "category": "llm_associated",
+   "severity": "medium",
+   "label": "LLM 高频动词/名词（delve/tapestry/testament…）",
+   "regex": "\\b(delve|delve into|tapestry|testament|beacon|cornerstone|embark|meticulous|showcase|boast|seamless|unlock|elevate|foster|harness|navigate|streamline|underscore|pivotal|realm|nuanced|multifaceted|intricate|leverage|utilize|holistic|paradigm|cutting-edge|state-of-the-art)\\b",
+   "maxHits": 5,
+   "profiles": "",
+   "languages": "en",
+   "technical_whitelist": [
+    "leverage",
+    "robust",
+    "robustness",
+    "crucial",
+    "exhibit",
+    "tailored",
+    "pivotal",
+    "seamless",
+    "intricate",
+    "delve",
+    "tapestry",
+    "testament"
+   ],
+   "whitelist_note": "leverage 是统计学杠杆值，robust/robustness 是稳健性，exhibit 在结果表里是'给出'。这些在本仓库的论文里都是术语，不是大模型腔。白名单只对这两条规则生效。",
+   "threshold_note": "同上。"
+  },
+  {
+   "id": "llm-transition-overuse",
+   "category": "llm_associated",
+   "severity": "low",
+   "label": "LLM 高频连接/过渡词（moreover/furthermore/in conclusion…）",
+   "regex": "\\b(moreover|furthermore|additionally|in conclusion|to sum up|in summary|ultimately|consequently|thus|hence|accordingly|thereby|to this end|notably|importantly|specifically|this matters|this motivates|that being said|in today's|in the realm of|when it comes to|a wide range of|plays? a crucial role in|it is worth mentioning|navigating the complexities of)\\b",
+   "maxHits": 99,
+   "profiles": "",
+   "languages": "en"
+  },
+  {
+   "id": "cn-ai-connectives",
+   "category": "llm_associated",
+   "severity": "low",
+   "label": "中文 AI 高频连接词",
+   "regex": "(值得注意的是|值得一提的是|不难发现|不难看出|显而易见|众所周知|综上所述|总的来说|与此同时|基于此|在此基础上|进一步|由此可见|鉴于|毫无疑问|特别地|有鉴于此|也就是说|随着[^，。；]{2,20}的发展|在[^，。；]{2,20}的背景下|需要强调的是)",
+   "maxHits": 99,
+   "profiles": "",
+   "languages": "zh"
+  },
+  {
+   "id": "abstract-filler",
+   "category": "academic_style",
+   "severity": "low",
+   "label": "抽象空泛判断",
+   "regex": "\\b(remarkably|interestingly|importantly|notably|critically|essentially|fundamentally|in essence|at its core)\\b",
+   "maxHits": 4,
+   "profiles": "",
+   "languages": "en"
+  },
+  {
+   "id": "significantly-context",
+   "category": "academic_style",
+   "severity": "low",
+   "label": "significantly-context",
+   "regex": "\\bsignificantly\\b",
+   "maxHits": 4,
+   "profiles": "",
+   "languages": "en"
+  },
+  {
+   "id": "we-believe",
+   "category": "academic_style",
+   "severity": "low",
+   "label": "“we believe/think” 弱表态",
+   "regex": "\\bwe (believe|think|feel|hope|wish|suspect)\\b",
+   "maxHits": 3,
+   "profiles": "",
+   "languages": "en"
+  },
+  {
+   "id": "vague-quantifiers",
+   "category": "academic_style",
+   "severity": "low",
+   "label": "模糊程度词",
+   "regex": "\\b(somewhat|quite|fairly|a bit|to some extent|to a (certain|large|limited) degree)\\b",
+   "maxHits": 3,
+   "profiles": "",
+   "languages": "en"
+  },
+  {
+   "id": "em-dash-density",
+   "category": "formatting",
+   "severity": "medium",
+   "label": "破折号密度过高",
+   "regex": "(——|—|–—)",
+   "maxHits": 3,
+   "profiles": "",
+   "languages": "zh, en",
+   "threshold_note": "整篇 1 个破折号不算风格问题。"
+  },
+  {
+   "id": "colon-title",
+   "category": "formatting",
+   "severity": "low",
+   "label": "冒号标题滥用",
+   "regex": "^[^#\\n]{0,60}[:：][^:：\\n]{0,60}$",
+   "maxHits": 99,
+   "profiles": "",
+   "languages": "zh, en"
+  },
+  {
+   "id": "hedge-density-en",
+   "category": "claim_calibration",
+   "severity": "medium",
+   "label": "防御性限定词密度过高（英文）",
+   "regex": "\\b(may|might|could|possibly|potentially|perhaps|not necessarily|cannot rule out|should be interpreted with caution|we refrain from|we do not claim)\\b",
+   "maxHits": 40,
+   "profiles": "",
+   "languages": "en",
+   "threshold_note": "每千词 1.3 次；正常 5-10 次。这条不该触发。"
+  },
+  {
+   "id": "hedge-density-zh",
+   "category": "claim_calibration",
+   "severity": "medium",
+   "label": "防御性限定词密度过高（中文）",
+   "regex": "(可能|或许|也许|不一定|不能排除|尚需进一步|有待进一步|需谨慎解读|并不意味着|并不代表|并非一定)",
+   "maxHits": 99,
+   "profiles": "",
+   "languages": "zh"
+  },
+  {
+   "id": "hedge-stacking",
+   "category": "claim_calibration",
+   "severity": "medium",
+   "label": "限定词堆叠（一条 claim 套多层保险）",
+   "regex": "\\b(may|might|could|can)\\s+(possibly|potentially|perhaps)\\s+(suggest|indicate|imply|reflect|represent|be|lead|result)\\b|(或许|也许|可能){2}",
+   "maxHits": 3,
+   "profiles": "",
+   "languages": "zh, en"
+  },
+  {
+   "id": "overlong-sentence-en",
+   "category": "academic_style",
+   "severity": "medium",
+   "label": "超长句 + 从句堆叠（英文）",
+   "regex": "\\b(which|that|while|whereas|although|because|thereby|leading to|resulting in)\\b",
+   "maxHits": 99,
+   "profiles": "",
+   "languages": "en",
+   "disabled": true,
+   "disabled_reason": "正则数的是从句连词（that/which/because），不是句长；实测输出 99 处而真实 >40 词的句子只有 17 个。已由 aitaste.check_sentence_length 的真句长判据替代。"
+  },
+  {
+   "id": "overlong-sentence-zh",
+   "category": "academic_style",
+   "severity": "medium",
+   "label": "超长句 + 连接词堆叠（中文）",
+   "regex": "(其中|同时|进一步|从而|进而|因此|并且|尤其|这意味着)",
+   "maxHits": 99,
+   "profiles": "",
+   "languages": "zh"
+  },
+  {
+   "id": "connective-overuse",
+   "category": "llm_associated",
+   "severity": "low",
+   "label": "连续句首连接词",
+   "regex": "\\b(Moreover|Furthermore|Additionally|In addition|However|Therefore|Thus|Consequently|Meanwhile)\\b",
+   "maxHits": 99,
+   "profiles": "",
+   "languages": "en"
+  },
+  {
+   "id": "claim-evidence-proximity",
+   "category": "claim_calibration",
+   "severity": "medium",
+   "label": "强主张附近缺少证据锚点",
+   "regex": "\\b(prove[sd]?|proven|established?|confirmed?|guarantee[sd]?|definitively|unequivocally|unambiguously|conclusively|we prove|we establish)\\b",
+   "maxHits": 3,
+   "profiles": "",
+   "languages": "en",
+   "negation_guard": true,
+   "guard_note": "两处实测：'these checks do not prove'（否定）与 'where that guarantee stops'（自我限定）。两条都是诚实表达。",
+   "guard_extra": [
+    "guarantee stops",
+    "guarantee holds",
+    "guarantee ends",
+    "until that guarantee"
+   ],
+   "threshold_note": "否定与限定语境已挡；余下按 3 计。"
+  },
+  {
+   "id": "format-unicode-math",
+   "category": "formatting",
+   "severity": "low",
+   "label": "Unicode 数学符号（建议改用 LaTeX 数学模式）",
+   "regex": "[\\u2080-\\u209c\\u00b9\\u00b2\\u00b3\\u2070-\\u2079\\u00b5\\u00d7\\u2212\\u03b1-\\u03c9\\u0391-\\u03a9]",
+   "maxHits": 4,
+   "profiles": "",
+   "languages": "zh, en"
+  },
+  {
+   "id": "cn-modifier-chain",
+   "category": "rhetorical_pattern",
+   "severity": "medium",
+   "label": "多重",
+   "regex": "(?:[^，。；、\\n:：]{1,8}的){3}[^，。；、\\n:：]{1,12}",
+   "maxHits": 4,
+   "profiles": "",
+   "languages": "zh"
+  },
+  {
+   "id": "cn-self-defeating",
+   "category": "claim_calibration",
+   "severity": "high",
+   "label": "自黑式免责套话（摧毁论文价值的表述）",
+   "regex": "(完全基于假数据|基于(虚构|伪造)数据|数据纯属虚构|(模型|结果|研究|方法|本文结论)(完全|根本)?毫无意义|结果完全不可靠|结论(完全)?没有意义|没有任何(实际|实用)价值|不足为凭)",
+   "maxHits": 3,
+   "profiles": "manuscript, unknown",
+   "languages": "zh"
+  },
+  {
+   "id": "llm-buzzword-en",
+   "category": "llm_associated",
+   "severity": "low",
+   "label": "空洞热词密度（英文：robust/crucial/exhibits/tailored…）",
+   "regex": "\\b(robust|crucial|substantially|exhibits|tailored|interplay|imperative)\\b",
+   "maxHits": 10,
+   "profiles": "",
+   "languages": "en",
+   "technical_whitelist": [
+    "leverage",
+    "robust",
+    "robustness",
+    "crucial",
+    "exhibit",
+    "tailored",
+    "pivotal",
+    "seamless",
+    "intricate",
+    "delve",
+    "tapestry",
+    "testament"
+   ],
+   "whitelist_note": "leverage 是统计学杠杆值，robust/robustness 是稳健性，exhibit 在结果表里是'给出'。这些在本仓库的论文里都是术语，不是大模型腔。白名单只对这两条规则生效。",
+   "threshold_note": "术语白名单已经挡掉 robust/leverage，余下按 10 计。"
+  },
+  {
+   "id": "cn-buzzword-density",
+   "category": "llm_associated",
+   "severity": "low",
+   "label": "抽象名词密度（中文：机制/支撑/动态/耦合/范式…）",
+   "regex": "(机制|支撑|动态|稳健性?|范式|拓扑|耦合|协同|维度|全流程|精细化|解耦)",
+   "maxHits": 99,
+   "profiles": "",
+   "languages": "zh"
+  }
+ ]
+}

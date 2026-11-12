@@ -1,0 +1,35 @@
+{
+  "facts": {
+    "T1_COLS": "4",
+    "T2_COUNT": "5000",
+    "T2_EXPECT": "5000",
+    "T3_DIST": "2",
+    "T3_ROWS": "10",
+    "T4_SAME": "yes",
+    "T4B_SAME": "yes"
+  },
+  "results": [
+    [
+      "T1 建表",
+      true
+    ],
+    [
+      "T2 灌数据",
+      true
+    ],
+    [
+      "T3 向量距离",
+      true
+    ],
+    [
+      "T4 等价谓词 A/B",
+      true
+    ],
+    [
+      "T4b BETWEEN vs AND",
+      true
+    ]
+  ],
+  "passed": 5,
+  "total": 5
+}

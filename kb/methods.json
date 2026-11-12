@@ -1,0 +1,629 @@
+{
+  "source": "dsh-ultramath/skills/模型库/方法选择决策树.md",
+  "n": 58,
+  "note": "每条是「特征路径 → 方法」。features 是从路径里抽的可匹配标签；doc 是原库里的详情文档名，需要时去查。",
+  "branches": [
+    {
+      "path": [
+        "时间序列（有时间列）",
+        "单变量"
+      ],
+      "method": "ARIMA / Prophet",
+      "doc": "",
+      "features": [
+        "time_series"
+      ]
+    },
+    {
+      "path": [
+        "时间序列（有时间列）",
+        "多变量+非线性"
+      ],
+      "method": "LSTM / XGBoost",
+      "doc": "",
+      "features": [
+        "time_series"
+      ]
+    },
+    {
+      "path": [
+        "时间序列（有时间列）",
+        "需要可解释性"
+      ],
+      "method": "ARIMA + 特征重要性分析",
+      "doc": "",
+      "features": [
+        "time_series"
+      ]
+    },
+    {
+      "path": [
+        "多对象+多指标（需要排名/打分）",
+        "指标数据完整"
+      ],
+      "method": "熵权法 + TOPSIS（客观）",
+      "doc": "",
+      "features": [
+        "multi_object"
+      ]
+    },
+    {
+      "path": [
+        "多对象+多指标（需要排名/打分）",
+        "需要专家判断"
+      ],
+      "method": "AHP + 模糊评价（主客观结合）",
+      "doc": "",
+      "features": [
+        "multi_object"
+      ]
+    },
+    {
+      "path": [
+        "特征丰富+标签（分类/回归）",
+        "回归"
+      ],
+      "method": "XGBoost / RandomForest / SVR",
+      "doc": "",
+      "features": [
+        "classification",
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "特征丰富+标签（分类/回归）",
+        "分类"
+      ],
+      "method": "XGBoost / LightGBM / SVM",
+      "doc": "",
+      "features": [
+        "classification",
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "特征丰富+标签（分类/回归）",
+        "聚类"
+      ],
+      "method": "K-Means / DBSCAN / 层次聚类",
+      "doc": "聚类分析类.md",
+      "features": [
+        "classification",
+        "clustering",
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "比较均值差异"
+      ],
+      "method": "t检验 / ANOVA",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "分类变量关联"
+      ],
+      "method": "χ²检验",
+      "doc": "",
+      "features": [
+        "classification",
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "不满足正态性"
+      ],
+      "method": "Mann-Whitney / Kruskal-Wallis",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "变量关系建模"
+      ],
+      "method": "多元回归 / Logistic回归",
+      "doc": "统计回归模型.md",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "线性关系"
+      ],
+      "method": "多元线性回归（最小二乘）",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "二元响应"
+      ],
+      "method": "Logistic回归",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "非线性饱和"
+      ],
+      "method": "Michaelis-Menten / 非线性回归",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "时间序列自相关"
+      ],
+      "method": "广义差分法",
+      "doc": "统计回归模型.md",
+      "features": [
+        "time_series",
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "不确定性下决策"
+      ],
+      "method": "期望优化",
+      "doc": "概率与随机模型.md",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "单周期订货"
+      ],
+      "method": "报童模型",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "多周期库存"
+      ],
+      "method": "(s,S)策略",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "收益管理"
+      ],
+      "method": "超售/定价优化",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "小样本预测（4-10个数据点）"
+      ],
+      "method": "灰色系统",
+      "doc": "灰色系统类.md",
+      "features": [
+        "small_sample"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "单调趋势"
+      ],
+      "method": "GM(1,1)",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "多因素关联排序"
+      ],
+      "method": "灰色关联分析",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"检验假设/探究变量关系\"",
+        "多变量预测"
+      ],
+      "method": "GM(1,N)",
+      "doc": "",
+      "features": [
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "数据质量问题（缺失值/异常值/量纲不一致）",
+        "缺失值"
+      ],
+      "method": "删除/填充/插值",
+      "doc": "",
+      "features": []
+    },
+    {
+      "path": [
+        "数据质量问题（缺失值/异常值/量纲不一致）",
+        "异常值"
+      ],
+      "method": "IQR/Z-score/Isolation Forest",
+      "doc": "",
+      "features": []
+    },
+    {
+      "path": [
+        "数据质量问题（缺失值/异常值/量纲不一致）",
+        "特征选择"
+      ],
+      "method": "相关性/重要性/RFE",
+      "doc": "",
+      "features": []
+    },
+    {
+      "path": [
+        "\"在约束下最大化/最小化\"",
+        "约束+目标都是线性"
+      ],
+      "method": "LP (PuLP/OR-Tools)",
+      "doc": "现代求解器.md",
+      "features": [
+        "optimization"
+      ]
+    },
+    {
+      "path": [
+        "\"在约束下最大化/最小化\"",
+        "有0-1/整数变量"
+      ],
+      "method": "MILP (OR-Tools CP-SAT)",
+      "doc": "现代求解器.md",
+      "features": [
+        "optimization"
+      ]
+    },
+    {
+      "path": [
+        "\"在约束下最大化/最小化\"",
+        "NP-hard/大规模"
+      ],
+      "method": "GA / PSO / SA",
+      "doc": "",
+      "features": [
+        "optimization"
+      ]
+    },
+    {
+      "path": [
+        "\"在约束下最大化/最小化\"",
+        "多目标"
+      ],
+      "method": "加权法 / ε-约束 / NSGA-II",
+      "doc": "多目标优化.md",
+      "features": [
+        "optimization",
+        "multi_objective"
+      ]
+    },
+    {
+      "path": [
+        "\"节点+边+权重+路径/流\"",
+        "两点间最小成本"
+      ],
+      "method": "Dijkstra / A*",
+      "doc": "",
+      "features": [
+        "graph"
+      ]
+    },
+    {
+      "path": [
+        "\"节点+边+权重+路径/流\"",
+        "连通所有节点"
+      ],
+      "method": "Kruskal / Prim",
+      "doc": "",
+      "features": [
+        "graph"
+      ]
+    },
+    {
+      "path": [
+        "\"节点+边+权重+路径/流\"",
+        "最大传输量"
+      ],
+      "method": "Dinic / EK",
+      "doc": "",
+      "features": [
+        "graph"
+      ]
+    },
+    {
+      "path": [
+        "\"节点+边+权重+路径/流\"",
+        "最短回路"
+      ],
+      "method": "TSP (GA/SA)",
+      "doc": "",
+      "features": [
+        "graph"
+      ]
+    },
+    {
+      "path": [
+        "\"节点+边+权重+路径/流\"",
+        "车辆调度"
+      ],
+      "method": "VRP (蚁群/节约算法)",
+      "doc": "",
+      "features": [
+        "graph"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "连续变化"
+      ],
+      "method": "ODE (scipy integrate)",
+      "doc": "",
+      "features": [
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "空间+时间"
+      ],
+      "method": "PDE (有限差分)",
+      "doc": "",
+      "features": [
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "随机不确定性"
+      ],
+      "method": "蒙特卡洛",
+      "doc": "概率与随机模型.md",
+      "features": [
+        "mechanism",
+        "stochastic"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "空间扩散"
+      ],
+      "method": "元胞自动机",
+      "doc": "",
+      "features": [
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "离散时间/周期决策"
+      ],
+      "method": "差分方程",
+      "doc": "差分方程模型.md",
+      "features": [
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "需要相轨线分析",
+        "种群年龄结构"
+      ],
+      "method": "Leslie矩阵",
+      "doc": "差分方程模型.md",
+      "features": [
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "需要相轨线分析",
+        "市场供需波动"
+      ],
+      "method": "蛛网模型",
+      "doc": "差分方程模型.md",
+      "features": [
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "状态离散+转移概率"
+      ],
+      "method": "马氏链",
+      "doc": "马氏链模型.md",
+      "features": [
+        "mechanism",
+        "stochastic"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "多阶段最优决策"
+      ],
+      "method": "动态规划",
+      "doc": "动态优化.md",
+      "features": [
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "需要相轨线分析",
+        "连续时间+控制约束"
+      ],
+      "method": "最优控制/Hamilton",
+      "doc": "动态优化.md",
+      "features": [
+        "optimization",
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "需要相轨线分析",
+        "无约束泛函极值"
+      ],
+      "method": "变分法/Euler方程",
+      "doc": "动态优化.md",
+      "features": [
+        "optimization",
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "只知变量关系不知具体形式"
+      ],
+      "method": "量纲分析",
+      "doc": "量纲分析与相似理论.md",
+      "features": [
+        "mechanism",
+        "regression"
+      ]
+    },
+    {
+      "path": [
+        "\"物理/生物/经济过程\"",
+        "需要分析长期行为/平衡点",
+        "复杂系统动态行为"
+      ],
+      "method": "因果回路图 / 存量流量图",
+      "doc": "系统动力学.md",
+      "features": [
+        "mechanism"
+      ]
+    },
+    {
+      "path": [
+        "\"多主体博弈/服务系统\"",
+        "利益冲突/均衡"
+      ],
+      "method": "Nash均衡 / Shapley值",
+      "doc": "",
+      "features": []
+    },
+    {
+      "path": [
+        "\"多主体博弈/服务系统\"",
+        "演化策略"
+      ],
+      "method": "复制动态 + ESS",
+      "doc": "",
+      "features": []
+    },
+    {
+      "path": [
+        "\"多主体博弈/服务系统\"",
+        "排队/等待"
+      ],
+      "method": "M/M/1 / M/M/c / 仿真",
+      "doc": "",
+      "features": []
+    },
+    {
+      "path": [
+        "\"方案比较+多项指标\""
+      ],
+      "method": "评价类 →  （同Step 2A评价分支）",
+      "doc": "评价类.md",
+      "features": []
+    },
+    {
+      "path": [
+        "\"社交网络/传播/群体行为/仿真\"",
+        "网络结构分析"
+      ],
+      "method": "NetworkX (中心性/社区发现)",
+      "doc": "",
+      "features": []
+    },
+    {
+      "path": [
+        "\"社交网络/传播/群体行为/仿真\"",
+        "传播扩散"
+      ],
+      "method": "SIR/SEIR (scipy.integrate)",
+      "doc": "",
+      "features": []
+    },
+    {
+      "path": [
+        "\"社交网络/传播/群体行为/仿真\"",
+        "微观行为仿真"
+      ],
+      "method": "Mesa ABM",
+      "doc": "",
+      "features": []
+    }
+  ]
+}

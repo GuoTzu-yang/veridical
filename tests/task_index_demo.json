@@ -1,0 +1,52 @@
+{
+  "name": "索引优化三问",
+  "relation": "and",
+  "env_level": 3,
+  "rounds": 0,
+  "claims": [
+    {
+      "cid": "C1",
+      "text": "给 age 建索引，让 age=42 的查询走索引",
+      "e1": 2,
+      "e2": 0,
+      "e3": 2,
+      "kind": "procedure",
+      "verify": {
+        "domain": "sql",
+        "task": {"sql": "SELECT COUNT(*) FROM bench_l3.t_ann WHERE age = 42"}
+      }
+    },
+    {
+      "cid": "C2",
+      "text": "给 age 建索引，让 age+0=42 的查询走索引",
+      "e1": 2,
+      "e2": 0,
+      "e3": 2,
+      "kind": "procedure",
+      "verify": {
+        "domain": "sql",
+        "task": {"sql": "SELECT COUNT(*) FROM bench_l3.t_ann WHERE age + 0 = 42"}
+      }
+    },
+    {
+      "cid": "C3",
+      "text": "查一张不存在的表",
+      "e1": 2,
+      "e2": 0,
+      "e3": 2,
+      "kind": "procedure",
+      "verify": {
+        "domain": "sql",
+        "task": {"sql": "SELECT * FROM bench_l3.no_such_table"}
+      }
+    },
+    {
+      "cid": "C4",
+      "text": "优化方向不唯一的一条（没有 verify，不取证）",
+      "e1": 1,
+      "e2": 0,
+      "e3": 1,
+      "kind": "procedure"
+    }
+  ]
+}

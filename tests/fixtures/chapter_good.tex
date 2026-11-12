@@ -1,0 +1,72 @@
+\begin{document}
+
+\section{Analysis of the problem}
+We decompose the object into five classes; the classification is an anatomy of
+the object and we ask where does each number come from. The structural,
+configuration, temporal, tabulated and computed classes differ in what a checker
+can ask, which is why the decomposition decides where the checks go. A checker
+that treats every number alike measures the layout rather than the provenance,
+and the failure rate it reports is therefore mostly noise about formatting: in a
+sample of 23 papers the layout share reached 9.4 percent of all tokens.
+
+\begin{table}\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+Class & Source & Share (\%) \\
+\midrule
+structural & layout & 9.4 \\
+configuration & method & 0.0 \\
+temporal & input file & 14.0 \\
+computed & artifact & 71.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Method and why}
+Each mechanism carries a rejected alternative; we explain why this rather than
+that, and what would change our mind before we kept it. The alternative we
+rejected for each is stated in the table, together with the observation that
+would have overturned the choice, and the measured cost of keeping it.
+
+\begin{table}\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+Mechanism & Rejected alternative & Why & Cost (s) \\
+\midrule
+freeze & inline quotes & checkable by a third party & 0.4 \\
+classify & trace every token & inflates with layout & 1.2 \\
+veto & a single score & five channels outvote two & 2.6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{What was wrong}
+\subsection{Case 1: the tokenizer}
+It was wrong; how found: a count of 199 against 1293; the change; why this is
+right, because the count moved while the reports did not.
+\subsection{Case 2: the gate}
+Wrong again; how found: a paper with zero citations passed; the change; why
+this is right, because a check must be able to fail on its own object.
+
+\section{Deployment}
+Three modes, a playbook, a time budget and a cost that separates machine time
+from editorial time. The first mode is a command line run by the author on the
+competition laptop, the second is a service any agent can call, and the third is
+a gate that runs on every commit. The failure table is the part that actually
+gets used under deadline, because the failure that matters is not a wrong
+answer but a stalled pipeline with a report due in an hour; a stalled compile
+costs 12 minutes of editorial time and nothing in machine time.
+
+\begin{table}\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+Mode & Machine (min) & Editorial (min) \\
+\midrule
+cli & 0.1 & 0.0 \\
+service & 0.3 & 2.0 \\
+ci & 1.5 & 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

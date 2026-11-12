@@ -1,0 +1,440 @@
+{
+  "n_map": 49,
+  "n_unsupported": 18,
+  "note": "match_method 按表顺序匹配，先具体后宽泛。args 里的 $y/$x/$min/$ahp 由 pipeline 替换。UNSUPPORTED 是能力边界 —— 推荐到这些说明插件做不了，应该降级到能做的近似方法，而不是硬上。",
+  "map": [
+    {
+      "kw": "特征工程",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "RFE",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "相关性/重要性",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "Isolation Forest",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "Z-score",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "IQR",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "删除/填充",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "数据质量",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "特征选择",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "异常值",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "缺失值",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "数据预处理",
+      "cmd": "profile",
+      "args": {
+        "--data": "$data"
+      }
+    },
+    {
+      "kw": "多元线性回归",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "多元回归",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "Logistic",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "非线性回归",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "回归",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "最小二乘",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "ARIMA",
+      "cmd": "forecast",
+      "args": {
+        "--y": "$y"
+      }
+    },
+    {
+      "kw": "Prophet",
+      "cmd": "forecast",
+      "args": {
+        "--y": "$y"
+      }
+    },
+    {
+      "kw": "时间序列",
+      "cmd": "forecast",
+      "args": {
+        "--y": "$y"
+      }
+    },
+    {
+      "kw": "预测",
+      "cmd": "forecast",
+      "args": {
+        "--y": "$y"
+      }
+    },
+    {
+      "kw": "灰色关联",
+      "cmd": "greyrel",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "GM(1",
+      "cmd": "grey",
+      "args": {
+        "--y": "$y"
+      }
+    },
+    {
+      "kw": "GM(1,N)",
+      "cmd": "grey",
+      "args": {
+        "--y": "$y"
+      }
+    },
+    {
+      "kw": "K-Means",
+      "cmd": "cluster",
+      "args": {
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "DBSCAN",
+      "cmd": "cluster",
+      "args": {
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "层次聚类",
+      "cmd": "cluster",
+      "args": {
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "聚类",
+      "cmd": "cluster",
+      "args": {
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "AHP",
+      "cmd": "ahp",
+      "args": {
+        "--ahp": "$ahp"
+      }
+    },
+    {
+      "kw": "层次分析",
+      "cmd": "ahp",
+      "args": {
+        "--ahp": "$ahp"
+      }
+    },
+    {
+      "kw": "熵权",
+      "cmd": "plot",
+      "args": {
+        "--kind": "bar",
+        "--cost": "$min"
+      }
+    },
+    {
+      "kw": "TOPSIS",
+      "cmd": "plot",
+      "args": {
+        "--kind": "bar",
+        "--cost": "$min"
+      }
+    },
+    {
+      "kw": "多目标",
+      "cmd": "plot",
+      "args": {
+        "--kind": "pareto",
+        "--min": "$min"
+      }
+    },
+    {
+      "kw": "帕累托",
+      "cmd": "plot",
+      "args": {
+        "--kind": "pareto",
+        "--min": "$min"
+      }
+    },
+    {
+      "kw": "线性规划",
+      "cmd": "solve",
+      "args": {
+        "--min": "$min"
+      }
+    },
+    {
+      "kw": "整数规划",
+      "cmd": "solve",
+      "args": {
+        "--min": "$min"
+      }
+    },
+    {
+      "kw": "优化",
+      "cmd": "solve",
+      "args": {
+        "--min": "$min"
+      }
+    },
+    {
+      "kw": "Dijkstra",
+      "cmd": "graph",
+      "args": {
+        "--cost": "$min"
+      }
+    },
+    {
+      "kw": "最小生成树",
+      "cmd": "graph",
+      "args": {
+        "--cost": "$min"
+      }
+    },
+    {
+      "kw": "Kruskal",
+      "cmd": "graph",
+      "args": {
+        "--cost": "$min"
+      }
+    },
+    {
+      "kw": "图论",
+      "cmd": "graph",
+      "args": {
+        "--cost": "$min"
+      }
+    },
+    {
+      "kw": "ODE",
+      "cmd": "ode",
+      "args": {
+        "--y": "$y"
+      }
+    },
+    {
+      "kw": "微分方程",
+      "cmd": "ode",
+      "args": {
+        "--y": "$y"
+      }
+    },
+    {
+      "kw": "t检验",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "ANOVA",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "Mann-Whitney",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "Kruskal",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    },
+    {
+      "kw": "χ²",
+      "cmd": "run",
+      "args": {
+        "--y": "$y",
+        "--x": "$x"
+      }
+    }
+  ],
+  "unsupported": [
+    {
+      "kw": "LSTM",
+      "why": "需深度学习框架，环境只有 numpy"
+    },
+    {
+      "kw": "XGBoost",
+      "why": "需 xgboost 包，未安装"
+    },
+    {
+      "kw": "LightGBM",
+      "why": "需 lightgbm 包，未安装"
+    },
+    {
+      "kw": "RandomForest",
+      "why": "需 sklearn，未安装"
+    },
+    {
+      "kw": "SVR",
+      "why": "需 sklearn，未安装"
+    },
+    {
+      "kw": "SVM",
+      "why": "需 sklearn，未安装"
+    },
+    {
+      "kw": "NSGA-II",
+      "why": "需遗传算法框架，未实现"
+    },
+    {
+      "kw": "GA /",
+      "why": "启发式优化未实现"
+    },
+    {
+      "kw": "PSO",
+      "why": "粒子群未实现"
+    },
+    {
+      "kw": "蒙特卡洛",
+      "why": "可作为求解手段，但不是独立命令"
+    },
+    {
+      "kw": "元胞自动机",
+      "why": "未实现"
+    },
+    {
+      "kw": "系统动力学",
+      "why": "未实现"
+    },
+    {
+      "kw": "博弈论",
+      "why": "未实现"
+    },
+    {
+      "kw": "排队论",
+      "why": "未实现"
+    },
+    {
+      "kw": "马氏链",
+      "why": "未实现"
+    },
+    {
+      "kw": "动态规划",
+      "why": "未实现"
+    },
+    {
+      "kw": "变分法",
+      "why": "未实现"
+    },
+    {
+      "kw": "PDE",
+      "why": "未实现"
+    }
+  ]
+}
